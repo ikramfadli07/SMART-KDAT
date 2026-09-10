@@ -1,171 +1,30 @@
-<!doctype html>
-<html lang="ms">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Kempen Internet Selamat — SMART KDAT V10</title>
+<!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kempen Internet Selamat — SMART KDAT</title>
 <style>
-:root{--bg:#07111f;--panel:#0d1b2e;--panel2:#10243c;--line:rgba(255,255,255,.1);--text:#f4f7fb;--muted:#a8b4c5;--accent:#5eead4;--accent2:#60a5fa}
-*{box-sizing:border-box}
-html,body{height:100%;overflow:hidden}
-body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at top right,#16365a 0,#07111f 45%,#050b14 100%);color:var(--text)}
-.app{height:100dvh;max-width:1280px;margin:auto;padding:18px;display:flex;flex-direction:column;overflow:hidden}
-.top{flex:0 0 auto;display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:14px}
-.brand{display:flex;align-items:center;gap:14px}.logo{width:50px;height:50px;flex:none;border-radius:16px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:25px;box-shadow:0 8px 30px rgba(94,234,212,.18)}
-.brand h1{font-size:20px;margin:0}.brand p{margin:3px 0 0;color:var(--muted);font-size:12px}
-.badges{display:flex;gap:8px;flex-wrap:wrap}.badge{border:1px solid var(--line);padding:7px 10px;border-radius:999px;font-size:11px;color:var(--muted);background:rgba(255,255,255,.03)}
-.grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.7fr) 300px;gap:14px}
-.chat,.side{min-height:0;background:rgba(13,27,46,.9);border:1px solid var(--line);border-radius:24px;backdrop-filter:blur(12px)}
-.chat{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;box-shadow:0 20px 70px rgba(0,0,0,.22)}
-.chat-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;background:rgba(7,17,31,.45);z-index:2}
-.messages{min-height:0;padding:20px 20px 28px;overflow-y:auto;overflow-x:hidden;scroll-behavior:smooth}
-.messages::-webkit-scrollbar{width:7px}.messages::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:999px}
-.msg{max-width:88%;padding:13px 15px;margin:0 0 12px;border-radius:17px;line-height:1.55;font-size:14px;animation:pop .22s ease both}
-@keyframes pop{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
-.bot{background:#10243c;border:1px solid rgba(96,165,250,.16);border-top-left-radius:5px}
-.user{background:linear-gradient(135deg,#155e75,#1d4ed8);margin-left:auto;border-top-right-radius:5px}
-.source{font-size:10px;letter-spacing:.06em;color:var(--accent);margin-bottom:7px;font-weight:800}
-.composer{position:relative;z-index:3;border-top:1px solid var(--line);padding:13px 14px;background:linear-gradient(to top,rgba(7,17,31,.98),rgba(7,17,31,.94));display:flex;gap:10px;align-items:center}
-.composer input{min-width:0;flex:1;background:#07111f;border:1px solid var(--line);border-radius:15px;padding:15px 16px;color:white;font-size:14px;outline:none;transition:.2s}
-.composer input:focus{border-color:rgba(94,234,212,.8);box-shadow:0 0 0 3px rgba(94,234,212,.08)}
-.composer button{height:48px;white-space:nowrap;border:0;cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#04111e;font-weight:800;border-radius:15px;padding:0 20px;transition:.2s}
-.composer button:hover{transform:translateY(-1px);filter:brightness(1.05)}
-.side{height:100%;overflow:auto;padding:17px}.side h3{margin:4px 0 12px}.stat{padding:13px;border:1px solid var(--line);border-radius:15px;margin-bottom:9px;background:rgba(255,255,255,.025)}.stat b{display:block;font-size:20px}.stat span{font-size:12px;color:var(--muted)}
-.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{padding:9px 10px;border-radius:999px;background:#12263e;color:#dbeafe;border:1px solid var(--line);font-size:12px;cursor:pointer;transition:.2s}.chip:hover{transform:translateY(-1px);border-color:var(--accent)}
-.card{padding:10px 12px;margin-top:8px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.025)}.muted{color:var(--muted)}.intent{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:#93c5fd;margin-top:9px;white-space:pre-wrap;max-height:150px;overflow:auto;padding:8px;background:rgba(0,0,0,.12);border-radius:9px}
-.toggle{display:flex;gap:6px}.toggle button{border:1px solid var(--line);background:transparent;color:var(--muted);padding:7px 9px;border-radius:10px;cursor:pointer}.toggle .active{background:#173455;color:white}
-@media(max-width:900px){html,body{overflow:auto}.app{height:100dvh;padding:10px}.grid{grid-template-columns:1fr}.side{display:none}.top{align-items:flex-start}.badges{display:none}.chat{min-height:0}.brand h1{font-size:16px}.brand p{font-size:11px}.msg{max-width:94%}}
-</style>
-</head>
-<body>
-<div class="app">
-  <div class="top">
-    <div class="brand"><div class="logo">🧠</div><div><h1>Kempen Internet Selamat — SMART KDAT</h1><p>V10 · Structured Data Intelligence Assistant</p></div></div>
-    <div class="badges"><div class="badge">📊 Data-driven</div><div class="badge">🛡️ No invented statistics</div><div class="badge">🧠 Field + Value Detection</div></div>
-  </div>
-  <div class="grid">
-    <section class="chat">
-      <div class="chat-head"><div><b>SMART KDAT AI Assistant</b><div class="muted" style="font-size:12px;margin-top:3px">Natural language → Structured filters → Exact data</div></div><div class="toggle"><button id="autoBtn" class="active" onclick="setDataset('auto')">Auto</button><button id="progBtn" onclick="setDataset('program')">Program</button><button id="instBtn" onclick="setDataset('institusi')">Institusi</button></div></div>
-      <div id="messages" class="messages"></div>
-      <div class="composer"><input id="q" placeholder="Contoh: Karnival Komuniti di Sabah yang belum dilaksanakan..." autocomplete="off"><button onclick="ask()">Hantar</button></div>
-    </section>
-    <aside class="side">
-      <h3>Data Knowledge Layer</h3>
-      <div class="stat"><b id="pcount">—</b><span>Rekod Program</span></div>
-      <div class="stat"><b id="icount">—</b><span>Rekod Institusi</span></div>
-      <div class="stat"><b>Structured Query</b><span>AI tidak search ayat semata-mata — ia padankan soalan kepada field sebenar.</span></div>
-      <h3 style="margin-top:20px">Cuba Tanya</h3>
-      <div class="chips" id="chips"></div>
-    </aside>
-  </div>
-</div>
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+:root{--primary:#2F63AF;--navy:#063F73;--sky:#22CBF2;--pink:#EC3D7C;--yellow:#FEC115;--page:#EAF1F8;--card:#fff;--heading:#0A2A4D;--body:#5B6B7C;--border:#D7E3EE;--success:#2FA84F;--r8:8px;--r12:12px;--r16:16px;--r24:24px;--shadow:0 8px 24px rgba(11,42,69,.08)}
+*{box-sizing:border-box}html,body{height:100%;overflow:hidden}body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--page);color:var(--body)}body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 100% 0,rgba(34,203,242,.12),transparent 28%),radial-gradient(circle at 0 100%,rgba(236,61,124,.07),transparent 30%)}
+.app{height:100dvh;max-width:1440px;margin:auto;padding:24px;display:flex;flex-direction:column;overflow:hidden}.top{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:16px}.brand{display:flex;align-items:center;gap:16px;min-width:0}.brand-logo{width:178px;height:72px;object-fit:contain;object-position:left center;flex:none;filter:drop-shadow(0 6px 12px rgba(10,42,77,.1))}.brand h1{margin:0;color:var(--heading);font-size:23px;line-height:1.15;letter-spacing:-.45px}.brand h1 span{color:var(--pink)}.brand p{margin:6px 0 0;font-size:12px}.brand p strong{color:var(--primary)}.badges{display:flex;gap:8px;flex-wrap:wrap}.badge{padding:8px 12px;border:1px solid var(--border);border-radius:999px;font-size:11px;font-weight:600;color:var(--navy);background:#fff}.live{background:var(--navy);color:#fff;border-color:var(--navy)}.live:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--success);margin-right:6px}
+.grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.75fr) 310px;gap:16px}.chat,.side{min-height:0;background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow)}.chat{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto;border-radius:var(--r24);overflow:hidden}.chat-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(100deg,#fff,#F5FAFD)}.chat-title{display:flex;align-items:center;gap:10px}.bot-avatar{width:38px;height:38px;border-radius:12px;background:var(--navy);display:grid;place-items:center;color:#fff;font-size:18px}.chat-title b{display:block;color:var(--heading);font-size:14px}.chat-title span{display:block;font-size:10px;margin-top:2px}.status{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600}.status i{width:8px;height:8px;border-radius:50%;background:var(--success)}
+.messages{min-height:0;padding:24px 22px 28px;overflow-y:auto;scroll-behavior:smooth;background:linear-gradient(rgba(255,255,255,.96),rgba(255,255,255,.96)),radial-gradient(circle at 90% 0,rgba(34,203,242,.06),transparent 30%)}.messages::-webkit-scrollbar{width:8px}.messages::-webkit-scrollbar-thumb{background:#C9D9E8;border-radius:999px}.msg{max-width:88%;padding:14px 16px;margin:0 0 14px;border-radius:16px;line-height:1.6;font-size:13px;animation:pop .22s ease both}@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}.bot{background:#F3F8FC;border:1px solid #DCE8F2;border-top-left-radius:5px;color:#425568}.user{color:#fff;background:linear-gradient(135deg,var(--primary),var(--navy));margin-left:auto;border-top-right-radius:5px}.source{font-size:10px;letter-spacing:.05em;color:var(--pink);margin-bottom:8px;font-weight:800;text-transform:uppercase}.source:before{content:"SMART KDAT";background:#FCE9F0;padding:4px 7px;border-radius:999px;margin-right:6px}
+.answer-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px;background:#fff;border:1px solid var(--border)}.answer-table th{background:var(--navy);color:#fff;text-align:left;padding:8px}.answer-table td{padding:8px;border-top:1px solid var(--border);vertical-align:top}.answer-table tr:nth-child(even) td{background:#F8FBFD}
+.composer{border-top:1px solid var(--border);padding:14px 16px;background:#fff;display:flex;gap:10px;align-items:center}.composer input{min-width:0;flex:1;background:#F7FAFC;border:1px solid var(--border);border-radius:12px;padding:15px 16px;color:var(--heading);font-family:inherit;font-size:13px;outline:none}.composer input:focus{background:#fff;border-color:var(--primary);box-shadow:0 0 0 4px rgba(47,99,175,.10)}.composer button{height:50px;border:0;cursor:pointer;background:var(--yellow);color:#0B2545;font-family:inherit;font-weight:800;border-radius:12px;padding:0 22px;box-shadow:0 7px 16px rgba(254,193,21,.22);transition:.2s}.composer button:hover{transform:translateY(-2px)}
+.side{height:100%;overflow:auto;border-radius:24px;padding:18px}.side h3{color:var(--heading);margin:5px 0 14px;font-size:15px}.stat{padding:14px 15px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px}.stat b{display:block;font-size:22px;color:var(--navy)}.stat span{font-size:11px;font-weight:600}.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{padding:9px 11px;border-radius:999px;background:#fff;color:var(--navy);border:1px solid var(--border);font-size:11px;font-weight:600;cursor:pointer;transition:.2s;font-family:inherit}.chip:hover{transform:translateY(-2px);border-color:var(--primary);background:#F4F8FC}.card{padding:12px 13px;margin-top:10px;border:1px solid var(--border);border-radius:12px;background:#F8FBFD;font-size:12px;line-height:1.5}.typing{display:flex;gap:5px}.typing i{width:7px;height:7px;border-radius:50%;background:var(--primary);animation:b 1s infinite}.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}@keyframes b{50%{transform:translateY(-4px);opacity:.55}}
+@media(max-width:900px){.app{padding:10px}.grid{grid-template-columns:1fr}.side,.badges{display:none}.brand-logo{width:132px;height:58px}.brand h1{font-size:16px}.brand p{font-size:10px}.chat{border-radius:18px}.msg{max-width:94%}.messages{padding:16px 14px 22px}.composer{padding:10px}.composer button{padding:0 16px}}
+</style></head><body>
+<div class="app"><header class="top"><div class="brand"><img class="brand-logo" src="kempen-internet-selamat-logo.png" alt="Kempen Internet Selamat"><div><h1>Kempen Internet Selamat <span>— SMART KDAT</span></h1><p>AI Data Assistant untuk carian <strong>Program & Institusi Pendidikan</strong></p></div></div><div class="badges"><div class="badge live">Data Ready</div><div class="badge" id="recordBadge">Memuatkan masterlist…</div></div></header>
+<main class="grid"><section class="chat"><div class="chat-head"><div class="chat-title"><div class="bot-avatar">🛡️</div><div><b>SMART KDAT Assistant</b><span>Fahami soalan → kenal pasti filter → jawab berdasarkan masterlist</span></div></div><div class="status"><i></i> Online</div></div><div class="messages" id="messages"></div><form class="composer" id="form"><input id="q" autocomplete="off" placeholder="Contoh: Berapa Karnival Komuniti yang belum dilaksanakan di Sabah?"><button>Tanya ✦</button></form></section>
+<aside class="side"><h3>Data Overview</h3><div class="stat"><b id="programCount">—</b><span>Rekod Program</span></div><div class="stat"><b id="institusiCount">—</b><span>Rekod Institusi</span></div><h3 style="margin-top:22px">Cuba tanya</h3><div class="chips"><button class="chip">Karnival Komuniti sahaja</button><button class="chip">Berapa Karnival Komuniti di Sabah?</button><button class="chip">Program belum dilaksanakan bulan Julai</button><button class="chip">Top 5 negeri paling banyak program</button><button class="chip">Institusi SK di Sabah</button><button class="chip">Jumlah peserta di Johor</button></div><div class="card"><b style="color:var(--heading)">Cara SMART KDAT berfikir</b><br>Ia mengenal pasti dataset, negeri, status, bulan, kategori program dan kata kunci sebelum menapis rekod sebenar.</div></aside></main></div>
 <script>
-let program=[],institusi=[],knowledge={},selected='auto',lastPlan=null;
-const months=['JANUARI','FEBRUARI','MAC','APRIL','MEI','JUN','JULAI','OGOS','SEPTEMBER','OKTOBER','NOVEMBER','DISEMBER'];
-const norm=v=>String(v??'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
-const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-const num=n=>Number(n||0).toLocaleString('en-MY');
-function msg(html,who='bot'){
-  const d=document.createElement('div');
-  d.className='msg '+who;
-  d.innerHTML=html;
-  messages.appendChild(d);
-  requestAnimationFrame(()=>{messages.scrollTop=messages.scrollHeight});
-  return d
-}
-function setDataset(x){selected=x;['auto','program','institusi'].forEach(k=>document.getElementById(k==='auto'?'autoBtn':k==='program'?'progBtn':'instBtn').classList.toggle('active',k===x))}
-function typeAndAsk(t){q.value='';let i=0;const z=setInterval(()=>{q.value=t.slice(0,++i);if(i===t.length){clearInterval(z);setTimeout(ask,120)}},12)}
-function cleanVal(v){return norm(v)}
-function allValues(ds,field){return (knowledge.datasets[ds]?.filterable?.[field]||[]).map(x=>String(x))}
-function matchValue(text,values){
-  const n=norm(text);let best=null,bestScore=0;
-  for(const v of values){const nv=norm(v);if(!nv||nv.length<2)continue;
-    let score=0;if(n.includes(nv))score=nv.length+100;
-    else{const words=nv.split(' ').filter(w=>w.length>2);const hits=words.filter(w=>n.includes(w)).length;if(words.length&&hits===words.length)score=hits*10+nv.length/100;}
-    if(score>bestScore){bestScore=score;best=v}
-  } return bestScore?best:null;
-}
-function datasetGuess(text){
-  if(selected!=='auto')return selected;const n=norm(text);
-  const instWords=['INSTITUSI','SEKOLAH','UNIVERSITI','KOLEJ','IPTA','IPG','SMK','SK','PPD'];
-  const progWords=['PROGRAM','AKTIVITI','KARNIVAL','EVENT','ACARA','BENGKEL','CERAMAH'];
-  let a=instWords.filter(w=>n.includes(w)).length,b=progWords.filter(w=>n.includes(w)).length;
-  // Exact value detection gives stronger evidence
-  if(matchValue(text,allValues('program','Kategori Program'))) b+=3;
-  if(matchValue(text,allValues('institusi','Kategori Sekolah'))||matchValue(text,allValues('institusi','Jenis Institusi'))) a+=3;
-  if(!a&&!b&&lastPlan)return lastPlan.dataset;
-  return a>b?'institusi':'program';
-}
-function intent(text){
-  const n=norm(text);
-  if(/\b(COMPARE|BANDING|VS|VERSUS)\b/.test(n))return'compare';
-  if(/PALING BANYAK|TERBANYAK|TERTINGGI|TOP\s*\d|RANKING/.test(n))return'top';
-  if(/PALING SEDIKIT|TERENDAH|KURANG SEKALI/.test(n))return'bottom';
-  if(/JUMLAH PESERTA|BERAPA PESERTA|PESERTA/.test(n))return'participants';
-  if(/BERAPA|JUMLAH|BILANGAN|TOTAL|ADA BERAPA/.test(n))return'count';
-  return'list';
-}
-function parse(text){
-  const ds=datasetGuess(text),n=norm(text),filters={};
-  const fields=Object.keys(knowledge.datasets[ds].filterable||{});
-  for(const f of fields){
-    if(['Bulan Nama','Tahun KDAT'].includes(f))continue;
-    const m=matchValue(text,allValues(ds,f)); if(m)filters[f]=m;
-  }
-  // Month aliases
-  let month=null;
-  months.forEach((m,i)=>{if(n.includes(m)||(['JAN','FEB','MAR','APR','MEI','JUN','JUL','OGOS','SEP','OKT','NOV','DIS'][i]&&n.includes(['JAN','FEB','MAR','APR','MEI','JUN','JUL','OGOS','SEP','OKT','NOV','DIS'][i])))month=i+1});
-  if(month)filters['Bulan KDAT']=month;
-  const y=n.match(/\b(20\d{2})\b/);if(y)filters['Tahun KDAT']=Number(y[1]);
-  if(/\b(BELUM|PENDING|BELUM DILAKSANAKAN)\b/.test(n))filters['Status Pelaksanaan']='Belum Dilaksanakan';
-  if(/\b(SUDAH|DAH|TELAH|SELESAI|SUDAH DILAKSANAKAN)\b/.test(n))filters['Status Pelaksanaan']='Sudah Dilaksanakan';
-  if(lastPlan&&(/^(YANG )?(BELUM|SUDAH|DAH|TELAH|SELESAI)\??$/.test(n))){Object.assign(filters,lastPlan.filters);filters['Status Pelaksanaan']=n.includes('BELUM')?'Belum Dilaksanakan':'Sudah Dilaksanakan'}
-  return {dataset:ds,intent:intent(text),filters,raw:text};
-}
-function filterRows(rows,filters){
-  return rows.filter(r=>Object.entries(filters).every(([f,v])=>{
-    if(v===undefined||v===null)return true;
-    const rv=r[f]; if(typeof v==='number')return Number(rv)===v;
-    return norm(rv)===norm(v);
-  }));
-}
-function rank(rows,field,asc=false){
-  const m={};rows.forEach(r=>{const k=r[field]||'TIDAK DINYATAKAN';m[k]=(m[k]||0)+1});
-  return Object.entries(m).map(([k,v])=>({k,v})).sort((a,b)=>asc?a.v-b.v:b.v-a.v);
-}
-function cards(rows,ds){
-  const title=ds==='program'?'Nama Program':'Nama Institusi';
-  return rows.slice(0,6).map(r=>`<div class="card"><b>${esc(r[title]||'-')}</b><br><span class="muted">📍 ${esc(r.Negeri||'-')} · ${esc(r['Status Pelaksanaan']||'-')}</span></div>`).join('');
-}
-function answer(plan){
-  const rows=filterRows(plan.dataset==='program'?program:institusi,plan.filters), label=knowledge.datasets[plan.dataset].label;
-  if(plan.intent==='participants'){
-    const total=rows.reduce((s,r)=>s+(Number(r['Jumlah Peserta'])||0),0);
-    return `👥 <b>Jumlah peserta: ${num(total)}</b><br><span class="muted">Berdasarkan ${num(rows.length)} rekod ${label} yang sepadan dengan filter anda.</span>`;
-  }
-  if(plan.intent==='top'||plan.intent==='bottom'){
-    const field=plan.dataset==='program'?'Negeri':'Negeri';const rr=rank(rows,field,plan.intent==='bottom').slice(0,5);
-    return `📊 <b>${plan.intent==='top'?'Ranking tertinggi':'Ranking terendah'}</b>${rr.map((x,i)=>`<div class="card">${i+1}. <b>${esc(x.k)}</b><br><span class="muted">${num(x.v)} rekod</span></div>`).join('')}`;
-  }
-  if(plan.intent==='count')return `📊 Berdasarkan masterlist, terdapat <b>${num(rows.length)}</b> rekod <b>${esc(label)}</b> yang memenuhi kriteria anda.`;
-  if(!rows.length)return `Saya tidak menemui rekod yang sepadan dengan kombinasi filter tersebut. Cuba ubah negeri, kategori, bulan atau status.`;
-  return `🔎 Saya menemui <b>${num(rows.length)}</b> rekod yang sepadan.${cards(rows,plan.dataset)}${rows.length>6?`<div class="muted" style="margin-top:8px">Memaparkan 6 rekod pertama daripada ${num(rows.length)}.</div>`:''}`;
-}
-function planLabel(p){return JSON.stringify({dataset:p.dataset,filters:p.filters,intent:p.intent},null,2)}
-function follow(p){
- const base=p.dataset==='program'?['Karnival Komuniti sahaja','Karnival Komuniti di Sabah','Program belum dilaksanakan bulan Julai','Top 5 negeri paling banyak program']:['Institusi SK di Sabah','Institusi yang belum dilaksanakan','PPD paling banyak institusi','Jumlah peserta institusi di Johor'];
- return '<div class="chips" style="margin-top:12px">'+base.map(x=>`<button class="chip" onclick='typeAndAsk(${JSON.stringify(x)})'>✨ ${esc(x)}</button>`).join('')+'</div>';
-}
-function ask(){
- const text=q.value.trim();if(!text)return;msg(esc(text),'user');q.value='';
- const p=parse(text);lastPlan=p;
- msg(`<div class="source">🧠 STRUCTURED DATA QUERY</div>${answer(p)}<details style="margin-top:10px"><summary class="muted" style="cursor:pointer;font-size:11px">Lihat Structured Query</summary><div class="intent">${esc(planLabel(p))}</div></details>${follow(p)}`);
-}
-q.addEventListener('keydown',e=>{if(e.key==='Enter')ask()});
-Promise.all([fetch('program.json').then(r=>r.json()),fetch('institusi.json').then(r=>r.json()),fetch('knowledge.json').then(r=>r.json())]).then(([p,i,k])=>{
- program=p;institusi=i;knowledge=k;pcount.textContent=num(p.length);icount.textContent=num(i.length);
- msg(`👋 <b>Selamat datang ke SMART KDAT V10.</b><br><br>Saya tidak lagi bergantung kepada keyword search sahaja. Saya cuba mengenal pasti <b>dataset → field → value → filter → calculation</b> berdasarkan masterlist sebenar.<br><br><span class="muted">Contoh: “Karnival Komuniti sahaja” → Kategori Program = KARNIVAL KOMUNITI.</span>`);
- const qs=['Karnival Komuniti sahaja','Berapa Karnival Komuniti di Sabah?','Program belum dilaksanakan bulan Julai','Top 5 negeri paling banyak program','Institusi SK yang belum dilaksanakan'];
- qs.forEach(x=>{const b=document.createElement('button');b.className='chip';b.textContent='✨ '+x;b.onclick=()=>typeAndAsk(x);chips.appendChild(b)});
-}).catch(e=>msg('⚠️ Data gagal dimuatkan: '+esc(e.message)));
-</script>
-</body></html>
+const messages=document.getElementById('messages'),q=document.getElementById('q');let PROGRAM=[],INSTITUSI=[];
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const norm=s=>String(s??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w\s]/g,' ').replace(/\s+/g,' ').trim();
+const states=['PERLIS','PULAU PINANG','KEDAH','PERAK','PAHANG','TERENGGANU','KELANTAN','NEGERI SEMBILAN','JOHOR','MELAKA','SELANGOR','WILAYAH PERSEKUTUAN','SARAWAK','SABAH'],aliases={penang:'PULAU PINANG',wp:'WILAYAH PERSEKUTUAN','kuala lumpur':'WILAYAH PERSEKUTUAN','negeri sembilan':'NEGERI SEMBILAN'};
+const months={januari:1,februari:2,mac:3,april:4,mei:5,jun:6,julai:7,ogos:8,september:9,oktober:10,november:11,disember:12,january:1,february:2,march:3,may:5,june:6,july:7,august:8,october:10,december:12};
+const field=(o,n)=>{for(const x of n)if(o[x]!=null&&o[x]!=='')return o[x];return ''};
+function add(h,w='bot'){const d=document.createElement('div');d.className='msg '+w;d.innerHTML=h;messages.appendChild(d);requestAnimationFrame(()=>messages.scrollTop=messages.scrollHeight);return d}
+function parse(question){const t=norm(question);let state=null;for(const [a,s] of Object.entries(aliases))if(t.includes(a))state=s;if(!state)state=states.find(s=>t.includes(norm(s)))||null;let month=null;for(const [m,n] of Object.entries(months))if(t.includes(m)){month=n;break}let status=/belum dilaksanakan|belum/.test(t)?'belum':/sudah dilaksanakan|telah dilaksanakan|sudah/.test(t)?'sudah':null;let category=/karnival komuniti/.test(t)?'Karnival Komuniti':/program umum/.test(t)?'Program Umum':/bengkel ikon/.test(t)?'Bengkel Ikon K-DAT':null;let top=(t.match(/top\s*(\d+)/)||[])[1];return{t,state,month,status,category,top:top?+top:null,dataset:/institusi|sekolah|universiti|kolej|ipg|sk |smk |pendidikan/.test(' '+t+' ')?'institusi':'program',participant:/jumlah peserta|berapa peserta|peserta/.test(t),count:/berapa|jumlah|bilangan|berapa banyak|count|top/.test(t)}}
+function filtered(data,p){return data.filter(r=>{if(p.state&&norm(field(r,['Negeri']))!==norm(p.state))return false;if(p.month&&String(field(r,['Bulan']))!==String(p.month))return false;const st=norm(field(r,['Status Pelaksanaan']));if(p.status==='belum'&&!st.includes('belum'))return false;if(p.status==='sudah'&&!st.includes('sudah'))return false;if(p.category&&!norm(field(r,['Kategori Program'])).includes(norm(p.category)))return false;if(p.dataset==='institusi'&&/(^|\s)sk(\s|$)/.test(' '+p.t+' ')){const v=norm(field(r,['Kategori Sekolah','Nama Institusi','Jenis Institusi']));if(!/(^|\s)sk(\s|$)|sekolah kebangsaan/.test(v))return false}return true})}
+function makeTable(rows,ds){const cols=ds==='institusi'?['Nama Institusi','Negeri','Kategori Sekolah','Status Pelaksanaan','Tarikh Pelaksanaan','Jumlah Peserta']:['Nama Program','Negeri','Kategori Program','Status Pelaksanaan','Tarikh Pelaksanaan','Jumlah Peserta'];return `<table class="answer-table"><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.slice(0,8).map(r=>`<tr>${cols.map(c=>`<td>${esc(field(r,[c])||'—')}</td>`).join('')}</tr>`).join('')}</tbody></table>${rows.length>8?`<div style="margin-top:8px;font-size:11px">Memaparkan 8 daripada ${rows.length.toLocaleString()} rekod.</div>`:''}`}
+function answer(question){const p=parse(question),data=p.dataset==='institusi'?INSTITUSI:PROGRAM,rows=filtered(data,p);if(p.top){const g={};rows.forEach(r=>{const s=field(r,['Negeri'])||'Tidak diketahui';g[s]=(g[s]||0)+1});const top=Object.entries(g).sort((a,b)=>b[1]-a[1]).slice(0,p.top);return `<div class="source">Analisis Masterlist</div><b>Top ${p.top} negeri berdasarkan jumlah rekod</b><table class="answer-table"><thead><tr><th>Negeri</th><th>Jumlah Rekod</th></tr></thead><tbody>${top.map(x=>`<tr><td>${esc(x[0])}</td><td><b>${x[1].toLocaleString()}</b></td></tr>`).join('')}</tbody></table>`}const ctx=[p.dataset==='institusi'?'Institusi Pendidikan':'Program',p.category,p.state,p.status==='belum'?'Belum Dilaksanakan':p.status==='sudah'?'Sudah Dilaksanakan':null,p.month?'Bulan '+p.month:null].filter(Boolean).join(' · ');if(!rows.length)return `<div class="source">Semakan Masterlist</div><b>Saya tidak jumpa rekod yang sepadan.</b><br><span style="font-size:12px">Saya menapis: ${esc(ctx||'masterlist')}.</span>`;if(p.participant){const total=rows.reduce((a,r)=>a+(parseFloat(field(r,['Jumlah Peserta']))||0),0);return `<div class="source">Semakan Masterlist</div><b>Jumlah peserta: ${total.toLocaleString()}</b><br><span style="font-size:12px">Berdasarkan ${rows.length.toLocaleString()} rekod (${esc(ctx)}).</span>${makeTable(rows,p.dataset)}`}if(p.count||p.category||p.state||p.status||p.month)return `<div class="source">Semakan Masterlist</div><b>${rows.length.toLocaleString()} rekod ditemui</b><br><span style="font-size:12px">Filter: ${esc(ctx)}.</span>${makeTable(rows,p.dataset)}`;return `<div class="source">SMART KDAT</div>Saya boleh membantu anda mencari data daripada <b>${PROGRAM.length.toLocaleString()} rekod Program</b> dan <b>${INSTITUSI.length.toLocaleString()} rekod Institusi Pendidikan</b>.`}
+async function boot(){try{[PROGRAM,INSTITUSI]=await Promise.all([fetch('program.json').then(r=>r.json()),fetch('institusi.json').then(r=>r.json())]);document.getElementById('programCount').textContent=PROGRAM.length.toLocaleString();document.getElementById('institusiCount').textContent=INSTITUSI.length.toLocaleString();document.getElementById('recordBadge').textContent=(PROGRAM.length+INSTITUSI.length).toLocaleString()+' rekod dimuatkan';add(`<div class="source">Selamat datang</div><b>Hai! Saya SMART KDAT.</b><br>Saya boleh membantu anda mencari dan menganalisis data <b>Kempen Internet Selamat</b> berdasarkan masterlist sebenar.<br><br>Cuba: <b>“Karnival Komuniti sahaja”</b> atau <b>“Berapa Karnival Komuniti di Sabah?”</b>`)}catch(e){add(`<div class="source">Ralat Data</div>Pastikan <b>program.json</b> dan <b>institusi.json</b> berada dalam folder yang sama dengan index.html.`)}}document.getElementById('form').addEventListener('submit',e=>{e.preventDefault();const text=q.value.trim();if(!text)return;add(esc(text),'user');q.value='';const t=add('<div class="typing"><i></i><i></i><i></i></div>');setTimeout(()=>{t.remove();add(answer(text))},350)});document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{q.value=c.textContent;q.focus()}));boot();
+</script></body></html>
