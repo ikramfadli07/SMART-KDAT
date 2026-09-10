@@ -296,97 +296,412 @@ body:before{
 </div>
 
 <script>
-let programs=[],institutions=[],mode='auto';
-const states=['perlis','kedah','pulau pinang','penang','perak','selangor','negeri sembilan','melaka','johor','pahang','terengganu','kelantan','sabah','sarawak','wilayah persekutuan','kuala lumpur','putrajaya','labuan'];
-const norm=v=>String(v||'').toLowerCase().trim();
-const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+/* =========================================================
+   SMART KDAT v4 — Smart Data Engine
+   Local-only: no server and no AI API required.
+   ========================================================= */
 
-function add(t,w='bot'){
-  const d=document.createElement('div');d.className='msg '+w;d.innerHTML=t;
-  messages.appendChild(d);messages.scrollTop=messages.scrollHeight;
+let programs = [], institutions = [], mode = 'auto';
+let lastContext = null;
+
+const DATASETS = {
+  program: {
+    label: 'program & aktiviti',
+    plural: 'program & aktiviti',
+    words: ['program','aktiviti','event','acara','karnival','bengkel','seminar','kempen','roadshow','sesi','ceramah']
+  },
+  institusi: {
+    label: 'institusi pendidikan',
+    plural: 'institusi pendidikan',
+    words: ['sekolah','institusi','universiti','kolej','kampus','pendidikan','ipta','ipts','tadika','ppd','smk','sk','sbp','mrsm']
+  }
+};
+
+const STATE_ALIASES = {
+  'perlis':['perlis'],
+  'kedah':['kedah'],
+  'pulau pinang':['pulau pinang','penang','p.pinang'],
+  'perak':['perak'],
+  'selangor':['selangor','selngor'],
+  'negeri sembilan':['negeri sembilan','n sembilan','n9','ns'],
+  'melaka':['melaka','malacca'],
+  'johor':['johor','johor bahru','jb'],
+  'pahang':['pahang'],
+  'terengganu':['terengganu','trg','ganu'],
+  'kelantan':['kelantan'],
+  'sabah':['sabah','saba'],
+  'sarawak':['sarawak','swk'],
+  'wilayah persekutuan':['wilayah persekutuan','kuala lumpur','kl','putrajaya','labuan']
+};
+
+const INTENT_WORDS = {
+  count:['berapa','jumlah','bilangan','berapa banyak','ada berapa','statistik','total'],
+  list:['senarai','apa','mana','cari','tunjuk','show','paparkan','list'],
+  top:['paling banyak','terbanyak','top','ranking','aktif','tertinggi','no 1','nombor 1'],
+  bottom:['paling sedikit','kurang','terendah','least','paling rendah'],
+  compare:['compare','banding','perbandingan','versus','vs','dibandingkan'],
+  coverage:['coverage','liputan','cover','dah cover','cakupan'],
+  status:['belum','masih belum','pending','akan datang','sudah','dah','telah','selesai','completed','done']
+};
+
+const STATUS_ALIASES = {
+  completed:['sudah','dah','telah','selesai','completed','done','telah dilaksanakan','sudah dilaksanakan'],
+  pending:['belum','masih belum','pending','akan datang','belum dilaksanakan','belum buat','tak buat lagi']
+};
+
+const norm = v => String(v || '')
+  .toLowerCase()
+  .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+  .replace(/\s+/g,' ')
+  .trim();
+
+const esc = v => String(v ?? '').replace(/[&<>"']/g,m=>({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+}[m]));
+
+/* ---------------- UI ---------------- */
+function add(t, who='bot') {
+  const d = document.createElement('div');
+  d.className = 'msg ' + who;
+  d.innerHTML = t;
+  messages.appendChild(d);
+  messages.scrollTop = messages.scrollHeight;
 }
-function typing(){
-  const d=document.createElement('div');d.id='typing';d.className='msg bot typing';
-  d.innerHTML='<i></i><i></i><i></i>';messages.appendChild(d);messages.scrollTop=messages.scrollHeight;
+
+function typing() {
+  const d=document.createElement('div');
+  d.id='typing';
+  d.className='msg bot typing';
+  d.innerHTML='<i></i><i></i><i></i>';
+  messages.appendChild(d);
+  messages.scrollTop=messages.scrollHeight;
 }
-function stopTyping(){const x=document.getElementById('typing');if(x)x.remove()}
+function stopTyping(){ const x=document.getElementById('typing'); if(x)x.remove(); }
+
 function welcome(){
-  add('👋 <b>Selamat datang ke SMART KDAT!</b><br><br>Saya boleh membantu anda mencari maklumat daripada masterlist <b>Kempen Internet Selamat</b>:<br><br>🗓️ Program & Aktiviti<br>🏫 Institusi Pendidikan<br>📍 Maklumat mengikut Negeri<br>📌 Status Pelaksanaan<br><br><span class="muted">Cuba tanya: “Berapa program di Sabah?” atau “Sekolah mana yang belum dilaksanakan di Johor?”</span>');
+  add(`👋 <b>Selamat datang ke SMART KDAT v4!</b><br><br>
+  Saya kini boleh memahami soalan dengan lebih fleksibel dan membuat analisis terus daripada masterlist:
+  <br><br>🗓️ Program & Aktiviti<br>🏫 Institusi Pendidikan<br>📊 Ranking & Top Negeri<br>⚖️ Perbandingan Negeri<br>📌 Status Pelaksanaan
+  <br><br><span class="muted">Cuba tanya: “Negeri mana paling banyak program belum dilaksanakan?”</span>`);
 }
-Promise.all([
-  fetch('program.json').then(r=>r.json()),
-  fetch('institusi.json').then(r=>r.json())
-]).then(([p,i])=>{
-  programs=p;institutions=i;
-  pCount.textContent=p.length.toLocaleString();
-  iCount.textContent=i.length.toLocaleString();
-  totalCount.textContent=(p.length+i.length).toLocaleString();
-  welcome();
-}).catch(()=>add('⚠️ Data gagal dimuatkan. Pastikan semua fail dimuat naik bersama dan laman dibuka melalui GitHub Pages atau web server.'));
+
+function clearChat(){ messages.innerHTML=''; lastContext=null; welcome(); q.focus(); }
 
 function setMode(m,b){
   mode=m;
   document.querySelectorAll('.mode-btn').forEach(x=>x.classList.remove('active'));
   if(b)b.classList.add('active');
 }
+
 function setModeByName(m){
-  const btn=[...document.querySelectorAll('.mode-btn')].find(x=>x.textContent.toLowerCase().includes(m==='institusi'?'institusi':'program'));
-  setMode(m,btn);
-  q.focus();
+  const btn=[...document.querySelectorAll('.mode-btn')].find(x=>norm(x.textContent).includes(m==='institusi'?'institusi':'program'));
+  setMode(m,btn); q.focus();
 }
-function quick(t){q.value=t;q.focus();ask()}
-function parse(text){
+
+function quick(t){ q.value=t; q.focus(); ask(); }
+
+/* ---------------- NLP helpers ---------------- */
+function levenshtein(a,b){
+  if(a===b)return 0;
+  if(!a.length)return b.length;
+  if(!b.length)return a.length;
+  const prev=Array.from({length:b.length+1},(_,i)=>i);
+  const cur=new Array(b.length+1);
+  for(let i=0;i<a.length;i++){
+    cur[0]=i+1;
+    for(let j=0;j<b.length;j++){
+      cur[j+1]=Math.min(
+        cur[j]+1,
+        prev[j+1]+1,
+        prev[j]+(a[i]===b[j]?0:1)
+      );
+    }
+    for(let j=0;j<=b.length;j++)prev[j]=cur[j];
+  }
+  return prev[b.length];
+}
+
+function fuzzyContains(text, phrase){
+  const n=norm(text), p=norm(phrase);
+  if(n.includes(p)) return true;
+  const words=n.split(' ');
+  const target=p.split(' ');
+  if(target.length===1){
+    return words.some(w=>{
+      const limit = target[0].length <= 4 ? 1 : 2;
+      return levenshtein(w,target[0])<=limit;
+    });
+  }
+  return false;
+}
+
+function detectStates(text){
+  const found=[];
+  for(const [state, aliases] of Object.entries(STATE_ALIASES)){
+    if(aliases.some(a=>fuzzyContains(text,a))) found.push(state);
+  }
+  return [...new Set(found)];
+}
+
+function detectDataset(text){
+  if(mode!=='auto') return mode;
   const n=norm(text);
-  let state=states.find(s=>n.includes(s));
-  if(state==='penang')state='pulau pinang';
-  let status=null;
-  if(/\b(belum|belum dilaksanakan|akan datang)\b/.test(n))status='belum';
-  if(/\b(sudah|dah|telah|selesai|telah dilaksanakan|sudah dilaksanakan)\b/.test(n))status='sudah';
-  const count=/berapa|jumlah|bilangan|statistik/.test(n);
-  return{n,state,status,count};
+  const score={program:0,institusi:0};
+  for(const [key, cfg] of Object.entries(DATASETS)){
+    cfg.words.forEach(w=>{ if(fuzzyContains(n,w)) score[key]++; });
+  }
+  if(score.institusi>score.program) return 'institusi';
+  return 'program';
 }
-function chooseDataset(n){
-  if(mode!=='auto')return mode;
-  if(/\b(sekolah|institusi|universiti|ppd|pendidikan|kolej|kampus)\b/.test(n))return'institusi';
-  if(/\b(program|event|aktiviti|karnival|bengkel)\b/.test(n))return'program';
-  return'program';
+
+function detectStatus(text){
+  const n=norm(text);
+  for(const [status, words] of Object.entries(STATUS_ALIASES)){
+    if(words.some(w=>n.includes(norm(w)))) return status;
+  }
+  return null;
 }
-function filterData(data,p){
+
+function detectIntent(text){
+  const n=norm(text);
+  for(const intent of ['compare','top','bottom','coverage','count','list']){
+    if(INTENT_WORDS[intent].some(w=>n.includes(norm(w)))) return intent;
+  }
+  // Natural question defaults to count when asking "banyak tak"
+  if(/banyak tak|ada tak|berapa/.test(n)) return 'count';
+  return 'list';
+}
+
+function parseQuestion(text){
+  const n=norm(text);
+  let states=detectStates(n);
+  let dataset=detectDataset(n);
+  let status=detectStatus(n);
+  let intent=detectIntent(n);
+
+  // Follow-up context: "yang belum?" after previous Sabah/program answer.
+  if(!states.length && lastContext?.states?.length) states=[...lastContext.states];
+  if(!status && lastContext?.status && /yang tu|itu|yang sama|status/.test(n)) status=lastContext.status;
+  if(mode==='auto' && lastContext?.dataset && !DATASETS.program.words.concat(DATASETS.institusi.words).some(w=>n.includes(w))){
+    dataset=lastContext.dataset;
+  }
+
+  return {raw:text,n,states,dataset,status,intent};
+}
+
+/* ---------------- Data helpers ---------------- */
+function datasetArray(dataset){
+  return dataset==='institusi' ? institutions : programs;
+}
+
+function statusMatch(value,status){
+  if(!status) return true;
+  const v=norm(value);
+  if(status==='completed'){
+    return STATUS_ALIASES.completed.some(x=>v.includes(norm(x)));
+  }
+  return STATUS_ALIASES.pending.some(x=>v.includes(norm(x)));
+}
+
+function stateMatch(value,state){
+  const v=norm(value);
+  if(state==='wilayah persekutuan'){
+    return ['wilayah persekutuan','kuala lumpur','putrajaya','labuan'].some(x=>v.includes(x));
+  }
+  return v.includes(state);
+}
+
+function filterData(data, p){
   let r=[...data];
-  if(p.state)r=r.filter(x=>norm(x['Negeri']).includes(p.state));
-  if(p.status)r=r.filter(x=>norm(x['Status Pelaksanaan']).includes(p.status));
+  if(p.states?.length){
+    r=r.filter(x=>p.states.some(s=>stateMatch(x['Negeri'],s)));
+  }
+  if(p.status){
+    r=r.filter(x=>statusMatch(x['Status Pelaksanaan'],p.status));
+  }
   return r;
 }
-function cards(r,type){
-  return r.slice(0,8).map(x=>type==='program'
-    ?`<div class="card"><b>${esc(x['Nama Program']||'Program KIS')}</b><br><span class="muted">📍 ${esc(x['Negeri']||'-')} · ${esc(x['Lokasi Program']||'-')}</span><br>📌 ${esc(x['Status Pelaksanaan']||'-')}<br>📅 ${esc(x['Tarikh Pelaksanaan']||x['Tarikh Sasaran Pelaksanaan']||'-')}</div>`
-    :`<div class="card"><b>${esc(x['Nama Institusi']||'-')}</b><br><span class="muted">📍 ${esc(x['Negeri']||'-')} · ${esc(x['PPD']||'-')}</span><br>📌 ${esc(x['Status Pelaksanaan']||'-')}<br>📅 ${esc(x['Tarikh Pelaksanaan']||x['Tarikh Sasaran Pelaksanaan']||'-')}</div>`
+
+function stateName(row){ return String(row['Negeri']||'Tidak Dinyatakan').trim() || 'Tidak Dinyatakan'; }
+
+function groupByState(data){
+  const map={};
+  data.forEach(x=>{
+    const s=stateName(x);
+    map[s]=(map[s]||0)+1;
+  });
+  return Object.entries(map).map(([state,count])=>({state,count}))
+    .sort((a,b)=>b.count-a.count);
+}
+
+function getRows(data,type){
+  return data.slice(0,8).map(x=>type==='program'
+    ? `<div class="card"><b>${esc(x['Nama Program']||x['Program']||'Program KIS')}</b>
+       <br><span class="muted">📍 ${esc(x['Negeri']||'-')} · ${esc(x['Lokasi Program']||x['Lokasi']||'-')}</span>
+       <br>📌 ${esc(x['Status Pelaksanaan']||'-')}
+       <br>📅 ${esc(x['Tarikh Pelaksanaan']||x['Tarikh Sasaran Pelaksanaan']||'-')}</div>`
+    : `<div class="card"><b>${esc(x['Nama Institusi']||x['Institusi']||'-')}</b>
+       <br><span class="muted">📍 ${esc(x['Negeri']||'-')} · ${esc(x['PPD']||x['Daerah']||'-')}</span>
+       <br>📌 ${esc(x['Status Pelaksanaan']||'-')}
+       <br>📅 ${esc(x['Tarikh Pelaksanaan']||x['Tarikh Sasaran Pelaksanaan']||'-')}</div>`
   ).join('');
 }
+
+function statusLabel(status){
+  return status==='completed' ? 'telah dilaksanakan' :
+         status==='pending' ? 'masih belum dilaksanakan' : '';
+}
+
+function totalByState(data,state,status=null){
+  return data.filter(x=>stateMatch(x['Negeri'],state) && (!status || statusMatch(x['Status Pelaksanaan'],status))).length;
+}
+
+/* ---------------- Answer engine ---------------- */
+function answerCount(p,data){
+  const filtered=filterData(data,p);
+  const label=DATASETS[p.dataset].label;
+  const stateText=p.states.length ? ` di <b>${p.states.join(' dan ')}</b>` : '';
+  const statusText=p.status ? ` yang <b>${statusLabel(p.status)}</b>` : '';
+
+  let answer=`📊 Berdasarkan masterlist SMART KDAT, terdapat <b>${filtered.length.toLocaleString()}</b> rekod ${label}${stateText}${statusText}.`;
+
+  if(p.states.length===1 && p.status){
+    const total=totalByState(data,p.states[0]);
+    if(total>0){
+      const pct=((filtered.length/total)*100).toFixed(1);
+      answer+=` Ini mewakili kira-kira <b>${pct}%</b> daripada keseluruhan rekod ${label} di ${p.states[0]}.`;
+    }
+  }
+  return answer;
+}
+
+function answerRanking(p,data,ascending=false){
+  const filtered=filterData(data,{...p,states:[]});
+  const grouped=groupByState(filtered);
+  if(ascending) grouped.sort((a,b)=>a.count-b.count);
+  const top=grouped.slice(0,5);
+  if(!top.length) return 'Saya tidak menemui rekod yang mencukupi untuk membuat ranking.';
+  const title=ascending ? '📉 <b>Negeri dengan rekod paling rendah</b>' : '🏆 <b>Top Negeri Berdasarkan Jumlah Rekod</b>';
+  const list=top.map((x,i)=>`<div class="card"><b>${i+1}. ${esc(x.state)}</b><br><span class="muted">${x.count.toLocaleString()} rekod</span></div>`).join('');
+  const statusText=p.status?` yang ${statusLabel(p.status)}`:'';
+  return `${title}<br><span class="muted">Berdasarkan ${DATASETS[p.dataset].label}${statusText}.</span>${list}`;
+}
+
+function answerCompare(p,data){
+  if(p.states.length<2){
+    return 'Untuk membuat perbandingan, sebutkan sekurang-kurangnya <b>dua negeri</b>. Contoh: “Compare Johor dengan Selangor”.';
+  }
+  const [a,b]=p.states.slice(0,2);
+  const ca=totalByState(data,a,p.status);
+  const cb=totalByState(data,b,p.status);
+  const diff=Math.abs(ca-cb);
+  const winner=ca===cb?null:(ca>cb?a:b);
+  const label=DATASETS[p.dataset].label;
+  let answer=`⚖️ <b>Perbandingan ${a} vs ${b}</b><br><br>
+  📍 ${a}: <b>${ca.toLocaleString()}</b> rekod<br>
+  📍 ${b}: <b>${cb.toLocaleString()}</b> rekod<br><br>`;
+  if(winner){
+    answer+=`<b>${winner}</b> mempunyai <b>${diff.toLocaleString()}</b> rekod ${label} lebih banyak.`;
+  } else {
+    answer+=`Kedua-dua negeri mempunyai jumlah rekod yang sama.`;
+  }
+  return answer;
+}
+
+function answerCoverage(p,data){
+  const filtered=filterData(data,p);
+  const grouped=groupByState(filtered);
+  const total=filtered.length;
+  if(!total) return 'Saya tidak menemui data yang mencukupi untuk analisis liputan.';
+  const top=grouped.slice(0,3);
+  const items=top.map(x=>{
+    const pct=((x.count/total)*100).toFixed(1);
+    return `<div class="card"><b>${esc(x.state)}</b><br><span class="muted">${x.count.toLocaleString()} rekod · ${pct}% daripada data yang dipilih</span></div>`;
+  }).join('');
+  return `🗺️ <b>Analisis Liputan</b><br><span class="muted">Berikut ialah negeri dengan bahagian rekod tertinggi dalam data yang dipilih.</span>${items}`;
+}
+
+function answerList(p,data){
+  const filtered=filterData(data,p);
+  if(!filtered.length) return `Saya tidak menemui rekod yang sepadan dalam masterlist. Cuba gunakan negeri, status atau jenis institusi/program yang lebih spesifik.`;
+  const label=DATASETS[p.dataset].label;
+  let intro=`Saya jumpa <b>${filtered.length.toLocaleString()}</b> rekod ${label}`;
+  if(p.states.length) intro+=` di <b>${p.states.join(' dan ')}</b>`;
+  if(p.status) intro+=` yang <b>${statusLabel(p.status)}</b>`;
+  intro+='.';
+  return `${intro}<br>${getRows(filtered,p.dataset)}${filtered.length>8?'<div class="muted" style="margin-top:9px">Memaparkan 8 rekod pertama.</div>':''}`;
+}
+
+function followUps(p){
+  const state=p.states[0];
+  const chips=[];
+  if(state && !p.status){
+    chips.push(`"${state}" yang belum dilaksanakan`, `Top negeri ${p.dataset==='program'?'program':'institusi'}`, `Compare ${state} dengan Selangor`);
+  } else if(state && p.status){
+    chips.push(`Jumlah ${p.dataset} di ${state}`, `Compare ${state} dengan Johor`, `Top 5 negeri`);
+  } else {
+    chips.push(`Top 5 negeri paling banyak ${p.dataset==='program'?'program':'institusi'}`, `Negeri mana paling banyak belum dilaksanakan`, `Compare Johor dengan Selangor`);
+  }
+  return `<div class="suggestions" style="padding:12px 0 0;border-top:0;background:transparent">${chips.slice(0,3).map(x=>`<button onclick="quick(${JSON.stringify(x)})">💬 ${esc(x)}</button>`).join('')}</div>`;
+}
+
+function buildAnswer(p){
+  const data=datasetArray(p.dataset);
+
+  if(p.intent==='compare') return answerCompare(p,data);
+  if(p.intent==='top') return answerRanking(p,data,false);
+  if(p.intent==='bottom') return answerRanking(p,data,true);
+  if(p.intent==='coverage') return answerCoverage(p,data);
+  if(p.intent==='count') return answerCount(p,data);
+  return answerList(p,data);
+}
+
+/* ---------------- Ask ---------------- */
 function ask(){
   const text=q.value.trim();
-  if(!text||!programs.length)return;
-  add(esc(text),'user');q.value='';typing();
+  if(!text || (!programs.length && !institutions.length)) return;
+
+  add(esc(text),'user');
+  q.value='';
+  typing();
+
+  const p=parseQuestion(text);
+
   setTimeout(()=>{
+    stopTyping();
+
     // Overall statistics question
-    const n=norm(text);
-    if(/jumlah program dan institusi|jumlah keseluruhan|jumlah data/.test(n)){
-      stopTyping();
-      add(`📊 <b>Statistik SMART KDAT</b><br><br>🗓️ Program & Aktiviti: <b>${programs.length.toLocaleString()}</b><br>🏫 Institusi Pendidikan: <b>${institutions.length.toLocaleString()}</b><br>📚 Jumlah Rekod: <b>${(programs.length+institutions.length).toLocaleString()}</b>`);
+    if(/jumlah program dan institusi|jumlah keseluruhan|jumlah data|berapa semua data/.test(p.n)){
+      const total=programs.length+institutions.length;
+      add(`📊 <b>Statistik Keseluruhan SMART KDAT</b><br><br>
+        🗓️ Program & Aktiviti: <b>${programs.length.toLocaleString()}</b><br>
+        🏫 Institusi Pendidikan: <b>${institutions.length.toLocaleString()}</b><br>
+        📚 Jumlah Keseluruhan: <b>${total.toLocaleString()}</b>`);
+      lastContext={dataset:'program',states:[],status:null};
       return;
     }
-    const p=parse(text),type=chooseDataset(p.n),data=type==='program'?programs:institutions,r=filterData(data,p);
-    stopTyping();
-    if(!r.length){add('Saya tidak menemui rekod yang sepadan. Cuba nyatakan negeri, jenis data atau status dengan lebih spesifik.');return}
-    const label=type==='program'?'program & aktiviti':'institusi pendidikan';
-    const ans=p.count
-      ?`Berdasarkan masterlist <b>${label}</b>, terdapat <b>${r.length.toLocaleString()}</b> rekod yang sepadan.`
-      :`Saya jumpa <b>${r.length.toLocaleString()}</b> rekod ${label} yang sepadan.<br>${cards(r,type)}${r.length>8?'<div class="muted" style="margin-top:8px">Memaparkan 8 rekod pertama.</div>':''}`;
-    add(ans);
-  },500);
+
+    const answer=buildAnswer(p);
+    add(answer + followUps(p));
+    lastContext={dataset:p.dataset,states:p.states,status:p.status,intent:p.intent};
+  }, 420);
 }
-function clearChat(){messages.innerHTML='';welcome();q.focus()}
-q.addEventListener('keydown',e=>{if(e.key==='Enter')ask()});
+
+q.addEventListener('keydown',e=>{ if(e.key==='Enter') ask(); });
+
+/* ---------------- Data load ---------------- */
+Promise.all([
+  fetch('program.json').then(r=>r.json()),
+  fetch('institusi.json').then(r=>r.json())
+]).then(([p,i])=>{
+  programs=p; institutions=i;
+  pCount.textContent=p.length.toLocaleString();
+  iCount.textContent=i.length.toLocaleString();
+  totalCount.textContent=(p.length+i.length).toLocaleString();
+  welcome();
+}).catch(()=>{
+  add('⚠️ Data gagal dimuatkan. Pastikan program.json dan institusi.json berada dalam folder yang sama dengan index.html dan laman dibuka melalui GitHub Pages atau web server.');
+});
 </script>
 </body>
 </html>
