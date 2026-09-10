@@ -199,13 +199,13 @@ body:before{
   .nav-status{width:100%}.stats{grid-template-columns:1fr}.msg{max-width:92%}.hero h1{font-size:43px}.inputbar button{min-width:80px}
 }
 
-/* SMART KDAT v7 AI Hybrid suggestion interaction */
+/* SMART KDAT v9 AI Hybrid suggestion interaction */
 .smart-followups button{transition:transform .18s ease, box-shadow .18s ease}
 .smart-followups button:hover{transform:translateY(-2px)}
 .smart-followups button:active{transform:scale(.98)}
 
 
-/* SMART KDAT v7 AI Hybrid */
+/* SMART KDAT v9 AI Hybrid */
 .ai-answer{line-height:1.55}
 .smart-followups button{transition:transform .18s ease,box-shadow .18s ease}
 .smart-followups button:hover{transform:translateY(-2px)}
@@ -373,7 +373,7 @@ function quick(t){
 
 function welcome(){
   const support=('gpu' in navigator);
-  add(`👋 <b>Selamat datang ke SMART KDAT v7 AI Hybrid!</b><br><br>
+  add(`👋 <b>Selamat datang ke SMART KDAT v9 AI Hybrid!</b><br><br>
   🧠 <b>AI memahami maksud soalan anda</b><br>
   📊 <b>Masterlist JSON kekal sebagai sumber data sebenar</b><br>
   🛡️ AI tidak dibenarkan mereka-reka statistik atau rekod<br><br>
@@ -476,14 +476,43 @@ function detectIntent(text){
   if(/berapa|jumlah|bilangan|total|banyak tak|ada berapa/.test(n))return'count';
   return'list';
 }
+const MONTH_ALIASES = {
+  1:['january','januari','jan'],
+  2:['february','februari','feb'],
+  3:['march','mac','mar'],
+  4:['april','apr'],
+  5:['may','mei'],
+  6:['june','jun'],
+  7:['july','julai','jul'],
+  8:['august','ogos','aug'],
+  9:['september','sep'],
+  10:['october','oktober','oct'],
+  11:['november','nov'],
+  12:['december','disember','dec']
+};
+const MONTH_NAMES_MS = ['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
+
+function detectMonth(text){
+  const n=norm(text);
+  for(const [num, aliases] of Object.entries(MONTH_ALIASES)){
+    if(aliases.some(a=>new RegExp(`(^|\\s)${a}(\\s|$)`,'i').test(n))) return Number(num);
+  }
+  // numeric month formats such as 01/2026 or 2026-01
+  let m=n.match(/\b20\d{2}[-\/](0?[1-9]|1[0-2])\b/);
+  if(m)return Number(m[1]);
+  m=n.match(/\b(0?[1-9]|1[0-2])[-\/]20\d{2}\b/);
+  if(m)return Number(m[1]);
+  return null;
+}
+
 function detectQuarter(text){const m=norm(text).match(/\bq\s*([1-4])\b/);return m?'Q'+m[1]:null;}
 function detectYear(text){const m=norm(text).match(/\b(20\d{2})\b/);return m?m[1]:null;}
 function parseQuestion(text){
-  const n=norm(text);let states=detectStates(n),dataset=detectDataset(n),status=detectStatus(n),intent=detectIntent(n),quarter=detectQuarter(n),year=detectYear(n);
+  const n=norm(text);let states=detectStates(n),dataset=detectDataset(n),status=detectStatus(n),intent=detectIntent(n),month=detectMonth(n),quarter=detectQuarter(n),year=detectYear(n);
   const hasDatasetWord=[...DATASETS.program.words,...DATASETS.institusi.words].some(w=>n.includes(w));
   if(!states.length&&lastContext?.states?.length&&/yang|lagi|itu|sana|tersebut/.test(n))states=[...lastContext.states];
   if(mode==='auto'&&lastContext?.dataset&&!hasDatasetWord)dataset=lastContext.dataset;
-  return {raw:text,n,states,dataset,status,intent,quarter,year};
+  return {raw:text,n,states,dataset,status,intent,month,quarter,year};
 }
 function applyConversationContext(p){
   if(!lastContext)return p;const n=p.n;
@@ -497,14 +526,31 @@ function applyConversationContext(p){
 function datasetArray(d){return d==='institusi'?institutions:programs;}
 function stateMatch(v,s){const x=norm(v);return STATE_ALIASES[s]?.some(a=>x.includes(norm(a)))||x.includes(norm(s));}
 function statusMatch(v,s){if(!s)return true;const x=norm(v);return STATUS_ALIASES[s].some(a=>x.includes(norm(a)));}
-function rowDateYear(r){return String(r['Tarikh Pelaksanaan']||r['Tarikh Sasaran Pelaksanaan']||'').slice(0,4);}
-function rowQuarter(r){const m=norm(r['Suku Tahun']).match(/q\s*([1-4])/);return m?'Q'+m[1]:null;}
+function getRowDate(r){
+  const raw=r['Tarikh Pelaksanaan']||r['Tarikh Sasaran Pelaksanaan']||'';
+  if(!raw)return null;
+  const s=String(raw).trim();
+  const m=s.match(/(20\d{2})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if(m)return {year:Number(m[1]),month:Number(m[2]),day:Number(m[3])};
+  const d=new Date(s);
+  if(!Number.isNaN(d.getTime()))return {year:d.getFullYear(),month:d.getMonth()+1,day:d.getDate()};
+  return null;
+}
+function rowDateYear(r){const d=getRowDate(r);return d?String(d.year):'';}
+function rowDateMonth(r){const d=getRowDate(r);return d?d.month:null;}
+function rowQuarter(r){
+  const explicit=norm(r['Suku Tahun']).match(/q\s*([1-4])/);
+  if(explicit)return 'Q'+explicit[1];
+  const d=getRowDate(r);
+  return d?'Q'+Math.ceil(d.month/3):null;
+}
 function filterData(data,p){
   let r=[...data];
   if(p.states?.length)r=r.filter(x=>p.states.some(s=>stateMatch(x['Negeri'],s)));
   if(p.status)r=r.filter(x=>statusMatch(x['Status Pelaksanaan'],p.status));
+  if(p.month)r=r.filter(x=>rowDateMonth(x)===p.month);
   if(p.quarter)r=r.filter(x=>rowQuarter(x)===p.quarter);
-  if(p.year)r=r.filter(x=>rowDateYear(x)===p.year||norm(x['Suku Tahun']).includes(p.year));
+  if(p.year)r=r.filter(x=>rowDateYear(x)===p.year||String(x['Suku Tahun']||'').includes(p.year));
   return r;
 }
 function stateName(r){return String(r['Negeri']||'Tidak Dinyatakan').trim()||'Tidak Dinyatakan';}
@@ -514,15 +560,104 @@ function groupByState(data,metric='count'){
 }
 function statusLabel(s){return s==='completed'?'telah dilaksanakan':s==='pending'?'masih belum dilaksanakan':'';}
 function extractSearchTerms(p){
-  const removable=[...Object.values(STATE_ALIASES).flat(),...Object.values(STATUS_ALIASES).flat(),...DATASETS.program.words,...DATASETS.institusi.words,'berapa','jumlah','bilangan','top','ranking','paling','banyak','sedikit','cari','senarai','tunjuk','papar','show','di','yang','dan','dengan','vs','compare','banding','belum','sudah','telah','peserta','program','institusi'].map(norm);
-  return p.n.split(' ').filter(w=>w.length>=3&&!removable.includes(w)&&!/^20\d{2}$/.test(w)&&!/^q[1-4]$/.test(w));
+  const removable=[
+    ...Object.values(STATE_ALIASES).flat(),
+    ...Object.values(STATUS_ALIASES).flat(),
+    'berapa','jumlah','bilangan','total','top','ranking','paling','banyak','sedikit',
+    'cari','senarai','tunjuk','papar','show','di','yang','dan','dengan','vs',
+    'compare','banding','belum','sudah','telah','peserta','mana','apa','semua'
+  ].map(norm);
+
+  return p.n.split(' ').filter(w =>
+    w.length>=2 &&
+    !removable.includes(w) &&
+    !Object.values(MONTH_ALIASES).flat().includes(w) &&
+    !/^20\d{2}$/.test(w) &&
+    !/^q[1-4]$/.test(w)
+  );
 }
+
+function searchableFields(row){
+  // IMPORTANT: include every relevant category / event field here.
+  return [
+    row['Nama Program'],
+    row['Kategori Program'],
+    row['Jenis Program'],
+    row['Jenis Aktiviti'],
+    row['Nama Aktiviti'],
+    row['Tema Program'],
+    row['Kategori'],
+    row['Nama Institusi'],
+    row['Kategori Institusi'],
+    row['Kategori Sekolah'],
+    row['Jenis Institusi'],
+    row['Jenis Modul'],
+    row['Lokasi Program'],
+    row['Lokasi'],
+    row['Negeri'],
+    row['PPD'],
+    row['Dun'],
+    row['DUN'],
+    row['Parlimen'],
+    row['Wilayah'],
+    row['Pelaksana'],
+    row['Gabungan Kerjasama']
+  ].filter(Boolean).map(String);
+}
+
 function textSearch(data,p){
-  const terms=extractSearchTerms(p);if(!terms.length)return filterData(data,p);
-  return filterData(data,p).filter(row=>{
-    const hay=norm([row['Nama Program'],row['Nama Institusi'],row['Lokasi Program'],row['PPD'],row['Dun'],row['Parlimen'],row['Wilayah'],row['Kategori Program'],row['Kategori Institusi'],row['Kategori Sekolah'],row['Jenis Institusi'],row['Jenis Modul'],row['Pelaksana'],row['Gabungan Kerjasama']].join(' '));
-    return terms.every(t=>hay.includes(t)||hay.split(' ').some(w=>levenshtein(w,t)<=1));
+  const terms=extractSearchTerms(p);
+  let base=filterData(data,p);
+
+  if(!terms.length)return base;
+
+  // 1. Exact full-phrase match first.
+  // This is what fixes queries such as "Karnival Komuniti".
+  const phrase=terms.join(' ');
+  let exactPhrase=base.filter(row =>
+    searchableFields(row).some(field=>norm(field).includes(phrase))
+  );
+  if(exactPhrase.length)return exactPhrase;
+
+  // 2. Every word must match somewhere in the SAME record.
+  let allTerms=base.filter(row=>{
+    const hay=norm(searchableFields(row).join(' '));
+    const words=hay.split(' ');
+    return terms.every(t =>
+      hay.includes(t) ||
+      words.some(w=>levenshtein(w,t)<= (t.length<=4?1:2))
+    );
   });
+  if(allTerms.length)return allTerms;
+
+  // 3. Partial phrase / fuzzy fallback, ranked by score.
+  const scored=base.map(row=>{
+    const fields=searchableFields(row).map(norm);
+    const hay=fields.join(' ');
+    let score=0;
+    for(const t of terms){
+      if(fields.some(f=>f===t))score+=10;
+      else if(fields.some(f=>f.includes(t)))score+=6;
+      else if(hay.includes(t))score+=4;
+      else if(hay.split(' ').some(w=>levenshtein(w,t)<= (t.length<=4?1:2)))score+=2;
+    }
+    return {row,score};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+
+  // Only return reasonable matches.
+  return scored.filter(x=>x.score>=Math.max(2,terms.length*2)).map(x=>x.row);
+}
+
+/* Detect event/category search even when the user does not say "program".
+   Examples:
+   - Karnival Komuniti
+   - Cari Karnival Komuniti
+   - Karnival Komuniti di Sabah
+*/
+function isSpecificSearchQuestion(p){
+  const generic=/^(cari|senarai|tunjuk|papar|show|apa|mana|semua|rekod|data|\s)+$/;
+  const terms=extractSearchTerms(p);
+  return terms.length>0 && !generic.test(terms.join(' '));
 }
 
 /* ---------- ANSWERS + FACTS FOR AI ---------- */
@@ -533,8 +668,11 @@ function cards(data,type){return data.slice(0,8).map(x=>{
 }).join('');}
 
 function computeFacts(p){
-  const data=datasetArray(p.dataset), filtered=filterData(data,p);
-  const facts={dataset:DATASETS[p.dataset].label,total:filtered.length,states:p.states,status:p.status,quarter:p.quarter,year:p.year,intent:p.intent};
+  const data=datasetArray(p.dataset);
+  // If the user names a specific event/category, calculate from the matching records,
+  // not from the whole dataset.
+  const filtered=(p.intent==='list' && isSpecificSearchQuestion(p)) ? textSearch(data,p) : filterData(data,p);
+  const facts={dataset:DATASETS[p.dataset].label,total:filtered.length,states:p.states,status:p.status,month:p.month?MONTH_NAMES_MS[p.month-1]:null,quarter:p.quarter,year:p.year,intent:p.intent,searchTerms:extractSearchTerms(p)};
 
   if(p.intent==='participants'){
     facts.totalParticipants=filtered.reduce((s,x)=>s+(Number(x['Jumlah Peserta'])||0),0);
@@ -574,9 +712,17 @@ function deterministicAnswer(p,facts){
   if(p.intent==='count'){
     let extra=p.states.length?` di <b>${p.states.join(' dan ')}</b>`:'';
     if(p.status)extra+=` yang <b>${statusLabel(p.status)}</b>`;
+    if(p.month)extra+=` bagi bulan <b>${MONTH_NAMES_MS[p.month-1]}</b>`;
     if(p.quarter)extra+=` bagi <b>${p.quarter}</b>`;
     if(p.year)extra+=` pada <b>${p.year}</b>`;
-    return `📊 Berdasarkan masterlist SMART KDAT, terdapat <b>${formatNumber(facts.total)}</b> rekod ${DATASETS[p.dataset].label}${extra}.`;
+
+    const specific=isSpecificSearchQuestion(p);
+    const countData=specific?textSearch(data,p):filterData(data,p);
+    const label=specific && facts.searchTerms?.length
+      ? `<b>${esc(facts.searchTerms.join(' '))}</b>`
+      : DATASETS[p.dataset].label;
+
+    return `📊 Berdasarkan masterlist SMART KDAT, terdapat <b>${formatNumber(countData.length)}</b> rekod ${label}${extra}.`;
   }
   const found=textSearch(data,p);
   if(!found.length)return'Saya tidak menemui rekod yang sepadan. Cuba gunakan nama institusi/program, negeri, PPD, DUN, Parlimen atau status.';
@@ -597,7 +743,7 @@ async function ask(){
   let p=applyConversationContext(parseQuestion(text));
 
   if(/^(hi|hello|hai|salam|assalamualaikum)$/i.test(p.n)){
-    add('👋 Hai! Saya SMART KDAT v7 AI Hybrid. Tanya saya apa-apa berkaitan program, institusi, status, negeri, peserta atau perbandingan data.');return;
+    add('👋 Hai! Saya SMART KDAT v9 AI Hybrid. Tanya saya apa-apa berkaitan program, institusi, status, negeri, peserta atau perbandingan data.');return;
   }
 
   typing('🧠 Memahami soalan dan menganalisis data...');
