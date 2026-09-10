@@ -297,51 +297,34 @@ body:before{
 
 <script>
 /* =========================================================
-   SMART KDAT v4 — Smart Data Engine
-   Local-only: no server and no AI API required.
+   SMART KDAT v5 — Intelligent Data Assistant
+   100% local: HTML + JSON. No server / API key required.
    ========================================================= */
 
 let programs = [], institutions = [], mode = 'auto';
 let lastContext = null;
+let pendingClarification = null;
 
 const DATASETS = {
   program: {
     label: 'program & aktiviti',
-    plural: 'program & aktiviti',
     words: ['program','aktiviti','event','acara','karnival','bengkel','seminar','kempen','roadshow','sesi','ceramah']
   },
   institusi: {
     label: 'institusi pendidikan',
-    plural: 'institusi pendidikan',
     words: ['sekolah','institusi','universiti','kolej','kampus','pendidikan','ipta','ipts','tadika','ppd','smk','sk','sbp','mrsm']
   }
 };
 
 const STATE_ALIASES = {
-  'perlis':['perlis'],
-  'kedah':['kedah'],
-  'pulau pinang':['pulau pinang','penang','p.pinang'],
-  'perak':['perak'],
-  'selangor':['selangor','selngor'],
+  'perlis':['perlis'], 'kedah':['kedah'], 'pulau pinang':['pulau pinang','penang'],
+  'perak':['perak'], 'selangor':['selangor','selngor'],
   'negeri sembilan':['negeri sembilan','n sembilan','n9','ns'],
-  'melaka':['melaka','malacca'],
-  'johor':['johor','johor bahru','jb'],
-  'pahang':['pahang'],
-  'terengganu':['terengganu','trg','ganu'],
-  'kelantan':['kelantan'],
-  'sabah':['sabah','saba'],
+  'melaka':['melaka','malacca'], 'johor':['johor','johor bahru','jb'],
+  'pahang':['pahang'], 'terengganu':['terengganu','trg','ganu'],
+  'kelantan':['kelantan'], 'sabah':['sabah','saba'],
   'sarawak':['sarawak','swk'],
   'wilayah persekutuan':['wilayah persekutuan','kuala lumpur','kl','putrajaya','labuan']
-};
-
-const INTENT_WORDS = {
-  count:['berapa','jumlah','bilangan','berapa banyak','ada berapa','statistik','total'],
-  list:['senarai','apa','mana','cari','tunjuk','show','paparkan','list'],
-  top:['paling banyak','terbanyak','top','ranking','aktif','tertinggi','no 1','nombor 1'],
-  bottom:['paling sedikit','kurang','terendah','least','paling rendah'],
-  compare:['compare','banding','perbandingan','versus','vs','dibandingkan'],
-  coverage:['coverage','liputan','cover','dah cover','cakupan'],
-  status:['belum','masih belum','pending','akan datang','sudah','dah','telah','selesai','completed','done']
 };
 
 const STATUS_ALIASES = {
@@ -349,358 +332,300 @@ const STATUS_ALIASES = {
   pending:['belum','masih belum','pending','akan datang','belum dilaksanakan','belum buat','tak buat lagi']
 };
 
-const norm = v => String(v || '')
-  .toLowerCase()
-  .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-  .replace(/\s+/g,' ')
-  .trim();
+const norm = v => String(v || '').toLowerCase()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim();
 
 const esc = v => String(v ?? '').replace(/[&<>"']/g,m=>({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
 }[m]));
 
-/* ---------------- UI ---------------- */
 function add(t, who='bot') {
-  const d = document.createElement('div');
-  d.className = 'msg ' + who;
-  d.innerHTML = t;
-  messages.appendChild(d);
-  messages.scrollTop = messages.scrollHeight;
-}
-
-function typing() {
   const d=document.createElement('div');
-  d.id='typing';
-  d.className='msg bot typing';
-  d.innerHTML='<i></i><i></i><i></i>';
+  d.className='msg '+who;
+  d.innerHTML=t;
   messages.appendChild(d);
   messages.scrollTop=messages.scrollHeight;
 }
-function stopTyping(){ const x=document.getElementById('typing'); if(x)x.remove(); }
-
-function welcome(){
-  add(`👋 <b>Selamat datang ke SMART KDAT v4!</b><br><br>
-  Saya kini boleh memahami soalan dengan lebih fleksibel dan membuat analisis terus daripada masterlist:
-  <br><br>🗓️ Program & Aktiviti<br>🏫 Institusi Pendidikan<br>📊 Ranking & Top Negeri<br>⚖️ Perbandingan Negeri<br>📌 Status Pelaksanaan
-  <br><br><span class="muted">Cuba tanya: “Negeri mana paling banyak program belum dilaksanakan?”</span>`);
+function typing(){
+  const d=document.createElement('div');
+  d.id='typing'; d.className='msg bot typing';
+  d.innerHTML='<i></i><i></i><i></i>';
+  messages.appendChild(d); messages.scrollTop=messages.scrollHeight;
 }
-
-function clearChat(){ messages.innerHTML=''; lastContext=null; welcome(); q.focus(); }
-
+function stopTyping(){document.getElementById('typing')?.remove();}
+function clearChat(){messages.innerHTML='';lastContext=null;pendingClarification=null;welcome();q.focus();}
 function setMode(m,b){
   mode=m;
   document.querySelectorAll('.mode-btn').forEach(x=>x.classList.remove('active'));
   if(b)b.classList.add('active');
 }
-
 function setModeByName(m){
   const btn=[...document.querySelectorAll('.mode-btn')].find(x=>norm(x.textContent).includes(m==='institusi'?'institusi':'program'));
   setMode(m,btn); q.focus();
 }
+function quick(t){q.value=t;q.focus();ask();}
 
-function quick(t){ q.value=t; q.focus(); ask(); }
+function welcome(){
+  add(`👋 <b>Selamat datang ke SMART KDAT v5!</b><br><br>
+  Saya boleh mencari dan menganalisis <b>17,674 rekod</b> secara terus daripada masterlist.<br><br>
+  🗓️ Program & Aktiviti &nbsp; 🏫 Institusi Pendidikan<br>
+  📍 Negeri, Wilayah, PPD, DUN & Parlimen<br>
+  📌 Status Pelaksanaan &nbsp; 📅 Tarikh / Suku Tahun<br>
+  👥 Jumlah Peserta &nbsp; 🏆 Ranking & Perbandingan<br><br>
+  <span class="muted">Contoh: “Top 5 negeri program belum dilaksanakan”, “Berapa peserta di Sabah?”, atau “Cari SMK di Johor”.</span>`);
+}
 
-/* ---------------- NLP helpers ---------------- */
+/* ---------- NLP ---------- */
 function levenshtein(a,b){
   if(a===b)return 0;
-  if(!a.length)return b.length;
-  if(!b.length)return a.length;
-  const prev=Array.from({length:b.length+1},(_,i)=>i);
-  const cur=new Array(b.length+1);
+  if(!a.length)return b.length;if(!b.length)return a.length;
+  let prev=Array.from({length:b.length+1},(_,i)=>i),cur=new Array(b.length+1);
   for(let i=0;i<a.length;i++){
     cur[0]=i+1;
-    for(let j=0;j<b.length;j++){
-      cur[j+1]=Math.min(
-        cur[j]+1,
-        prev[j+1]+1,
-        prev[j]+(a[i]===b[j]?0:1)
-      );
-    }
-    for(let j=0;j<=b.length;j++)prev[j]=cur[j];
+    for(let j=0;j<b.length;j++)cur[j+1]=Math.min(cur[j]+1,prev[j+1]+1,prev[j]+(a[i]===b[j]?0:1));
+    [prev,cur]=[cur,prev];
   }
   return prev[b.length];
 }
-
-function fuzzyContains(text, phrase){
-  const n=norm(text), p=norm(phrase);
-  if(n.includes(p)) return true;
-  const words=n.split(' ');
-  const target=p.split(' ');
-  if(target.length===1){
-    return words.some(w=>{
-      const limit = target[0].length <= 4 ? 1 : 2;
-      return levenshtein(w,target[0])<=limit;
-    });
-  }
+function fuzzyContains(text,phrase){
+  const n=norm(text),p=norm(phrase);
+  if(!p)return false;if(n.includes(p))return true;
+  if(!p.includes(' '))return n.split(' ').some(w=>levenshtein(w,p)<= (p.length<=4?1:2));
   return false;
 }
-
 function detectStates(text){
-  const found=[];
-  for(const [state, aliases] of Object.entries(STATE_ALIASES)){
-    if(aliases.some(a=>fuzzyContains(text,a))) found.push(state);
-  }
+  const n=norm(text),found=[];
+  for(const [s,a] of Object.entries(STATE_ALIASES))
+    if(a.some(x=>fuzzyContains(n,x)))found.push(s);
   return [...new Set(found)];
 }
-
-function detectDataset(text){
-  if(mode!=='auto') return mode;
-  const n=norm(text);
-  const score={program:0,institusi:0};
-  for(const [key, cfg] of Object.entries(DATASETS)){
-    cfg.words.forEach(w=>{ if(fuzzyContains(n,w)) score[key]++; });
-  }
-  if(score.institusi>score.program) return 'institusi';
-  return 'program';
-}
-
 function detectStatus(text){
   const n=norm(text);
-  for(const [status, words] of Object.entries(STATUS_ALIASES)){
-    if(words.some(w=>n.includes(norm(w)))) return status;
-  }
+  for(const [s,words] of Object.entries(STATUS_ALIASES))
+    if(words.some(w=>n.includes(norm(w))))return s;
   return null;
 }
-
+function detectDataset(text){
+  if(mode!=='auto')return mode;
+  const n=norm(text),score={program:0,institusi:0};
+  for(const [k,c] of Object.entries(DATASETS))
+    c.words.forEach(w=>{if(fuzzyContains(n,w))score[k]++;});
+  return score.institusi>score.program?'institusi':'program';
+}
 function detectIntent(text){
   const n=norm(text);
-  for(const intent of ['compare','top','bottom','coverage','count','list']){
-    if(INTENT_WORDS[intent].some(w=>n.includes(norm(w)))) return intent;
-  }
-  // Natural question defaults to count when asking "banyak tak"
-  if(/banyak tak|ada tak|berapa/.test(n)) return 'count';
-  return 'list';
+  if(/\b(compare|banding|perbandingan|versus|vs)\b/.test(n))return'compare';
+  if(/paling banyak|terbanyak|top\s*\d*|ranking|tertinggi|no\s*1|nombor\s*1/.test(n))return'top';
+  if(/paling sedikit|kurang|terendah|paling rendah|least/.test(n))return'bottom';
+  if(/jumlah peserta|berapa peserta|total peserta|peserta/.test(n))return'participants';
+  if(/coverage|liputan|cover|cakupan/.test(n))return'coverage';
+  if(/berapa|jumlah|bilangan|total|banyak tak|ada berapa/.test(n))return'count';
+  if(/cari|senarai|tunjuk|papar|show|mana|apa/.test(n))return'list';
+  return'list';
 }
-
+function detectQuarter(text){
+  const n=norm(text);
+  const m=n.match(/\bq\s*([1-4])\b/);
+  return m?'Q'+m[1]:null;
+}
+function detectYear(text){
+  const m=norm(text).match(/\b(20\d{2})\b/);
+  return m?m[1]:null;
+}
 function parseQuestion(text){
   const n=norm(text);
   let states=detectStates(n);
   let dataset=detectDataset(n);
   let status=detectStatus(n);
   let intent=detectIntent(n);
+  let quarter=detectQuarter(n),year=detectYear(n);
 
-  // Follow-up context: "yang belum?" after previous Sabah/program answer.
-  if(!states.length && lastContext?.states?.length) states=[...lastContext.states];
-  if(!status && lastContext?.status && /yang tu|itu|yang sama|status/.test(n)) status=lastContext.status;
-  if(mode==='auto' && lastContext?.dataset && !DATASETS.program.words.concat(DATASETS.institusi.words).some(w=>n.includes(w))){
-    dataset=lastContext.dataset;
-  }
+  const hasDatasetWord=[...DATASETS.program.words,...DATASETS.institusi.words].some(w=>n.includes(w));
+  if(!states.length && lastContext?.states?.length && /yang|lagi|itu|sana|negeri tersebut|negeri tu/.test(n))states=[...lastContext.states];
+  if(!status && /yang belum|belum lagi/.test(n))status='pending';
+  if(mode==='auto' && lastContext?.dataset && !hasDatasetWord)dataset=lastContext.dataset;
+  if(!quarter && lastContext?.quarter && /suku tahun|quarter|q\d/.test(n))quarter=lastContext.quarter;
+  if(!year && lastContext?.year && /tahun itu|tahun tersebut/.test(n))year=lastContext.year;
 
-  return {raw:text,n,states,dataset,status,intent};
+  return {raw:text,n,states,dataset,status,intent,quarter,year};
 }
 
-/* ---------------- Data helpers ---------------- */
-function datasetArray(dataset){
-  return dataset==='institusi' ? institutions : programs;
+/* ---------- Data filtering ---------- */
+function datasetArray(dataset){return dataset==='institusi'?institutions:programs;}
+function stateMatch(v,s){
+  const x=norm(v);
+  return STATE_ALIASES[s]?.some(a=>x.includes(norm(a)))||x.includes(norm(s));
 }
-
-function statusMatch(value,status){
-  if(!status) return true;
-  const v=norm(value);
-  if(status==='completed'){
-    return STATUS_ALIASES.completed.some(x=>v.includes(norm(x)));
-  }
-  return STATUS_ALIASES.pending.some(x=>v.includes(norm(x)));
+function statusMatch(v,status){
+  if(!status)return true;
+  const x=norm(v);
+  return STATUS_ALIASES[status].some(a=>x.includes(norm(a)));
 }
-
-function stateMatch(value,state){
-  const v=norm(value);
-  if(state==='wilayah persekutuan'){
-    return ['wilayah persekutuan','kuala lumpur','putrajaya','labuan'].some(x=>v.includes(x));
-  }
-  return v.includes(state);
+function rowDateYear(row){
+  return String(row['Tarikh Pelaksanaan']||row['Tarikh Sasaran Pelaksanaan']||'').slice(0,4);
 }
-
-function filterData(data, p){
+function rowQuarter(row){
+  const q=norm(row['Suku Tahun']);
+  const m=q.match(/q\s*([1-4])/);
+  return m?'Q'+m[1]:null;
+}
+function filterData(data,p){
   let r=[...data];
-  if(p.states?.length){
-    r=r.filter(x=>p.states.some(s=>stateMatch(x['Negeri'],s)));
-  }
-  if(p.status){
-    r=r.filter(x=>statusMatch(x['Status Pelaksanaan'],p.status));
-  }
+  if(p.states?.length)r=r.filter(x=>p.states.some(s=>stateMatch(x['Negeri'],s)));
+  if(p.status)r=r.filter(x=>statusMatch(x['Status Pelaksanaan'],p.status));
+  if(p.quarter)r=r.filter(x=>rowQuarter(x)===p.quarter);
+  if(p.year)r=r.filter(x=>rowDateYear(x)===p.year || norm(x['Suku Tahun']).includes(p.year));
   return r;
 }
-
-function stateName(row){ return String(row['Negeri']||'Tidak Dinyatakan').trim() || 'Tidak Dinyatakan'; }
-
-function groupByState(data){
+function stateName(row){return String(row['Negeri']||'Tidak Dinyatakan').trim()||'Tidak Dinyatakan';}
+function groupByState(data, metric='count'){
   const map={};
   data.forEach(x=>{
     const s=stateName(x);
-    map[s]=(map[s]||0)+1;
+    map[s]=(map[s]||0)+(metric==='participants'?Number(x['Jumlah Peserta'])||0:1);
   });
-  return Object.entries(map).map(([state,count])=>({state,count}))
-    .sort((a,b)=>b.count-a.count);
+  return Object.entries(map).map(([state,value])=>({state,value})).sort((a,b)=>b.value-a.value);
+}
+function statusLabel(s){return s==='completed'?'telah dilaksanakan':s==='pending'?'masih belum dilaksanakan':'';}
+function formatNumber(n){return Number(n||0).toLocaleString('en-MY');}
+
+/* ---------- Search by any relevant text ---------- */
+function extractSearchTerms(p){
+  const removable=[
+    ...Object.values(STATE_ALIASES).flat(),
+    ...Object.values(STATUS_ALIASES).flat(),
+    ...DATASETS.program.words,...DATASETS.institusi.words,
+    'berapa','jumlah','bilangan','top','ranking','paling','banyak','sedikit','cari','senarai','tunjuk','papar','show',
+    'di','yang','dan','dengan','vs','compare','banding','belum','sudah','telah','peserta','program','institusi'
+  ].map(norm);
+  return p.n.split(' ').filter(w=>w.length>=3 && !removable.includes(w) && !/^20\d{2}$/.test(w) && !/^q[1-4]$/.test(w));
+}
+function textSearch(data,p){
+  const terms=extractSearchTerms(p);
+  if(!terms.length)return filterData(data,p);
+  const base=filterData(data,p);
+  return base.filter(row=>{
+    const hay=norm([
+      row['Nama Program'],row['Nama Institusi'],row['Lokasi Program'],row['PPD'],
+      row['Dun'],row['Parlimen'],row['Wilayah'],row['Kategori Program'],
+      row['Kategori Institusi'],row['Kategori Sekolah'],row['Jenis Institusi'],
+      row['Jenis Modul'],row['Pelaksana'],row['Gabungan Kerjasama']
+    ].join(' '));
+    return terms.every(t=>hay.includes(t) || hay.split(' ').some(w=>levenshtein(w,t)<=1));
+  });
 }
 
-function getRows(data,type){
-  return data.slice(0,8).map(x=>type==='program'
-    ? `<div class="card"><b>${esc(x['Nama Program']||x['Program']||'Program KIS')}</b>
-       <br><span class="muted">📍 ${esc(x['Negeri']||'-')} · ${esc(x['Lokasi Program']||x['Lokasi']||'-')}</span>
-       <br>📌 ${esc(x['Status Pelaksanaan']||'-')}
-       <br>📅 ${esc(x['Tarikh Pelaksanaan']||x['Tarikh Sasaran Pelaksanaan']||'-')}</div>`
-    : `<div class="card"><b>${esc(x['Nama Institusi']||x['Institusi']||'-')}</b>
-       <br><span class="muted">📍 ${esc(x['Negeri']||'-')} · ${esc(x['PPD']||x['Daerah']||'-')}</span>
-       <br>📌 ${esc(x['Status Pelaksanaan']||'-')}
-       <br>📅 ${esc(x['Tarikh Pelaksanaan']||x['Tarikh Sasaran Pelaksanaan']||'-')}</div>`
-  ).join('');
-}
-
-function statusLabel(status){
-  return status==='completed' ? 'telah dilaksanakan' :
-         status==='pending' ? 'masih belum dilaksanakan' : '';
-}
-
-function totalByState(data,state,status=null){
-  return data.filter(x=>stateMatch(x['Negeri'],state) && (!status || statusMatch(x['Status Pelaksanaan'],status))).length;
-}
-
-/* ---------------- Answer engine ---------------- */
-function answerCount(p,data){
-  const filtered=filterData(data,p);
-  const label=DATASETS[p.dataset].label;
-  const stateText=p.states.length ? ` di <b>${p.states.join(' dan ')}</b>` : '';
-  const statusText=p.status ? ` yang <b>${statusLabel(p.status)}</b>` : '';
-
-  let answer=`📊 Berdasarkan masterlist SMART KDAT, terdapat <b>${filtered.length.toLocaleString()}</b> rekod ${label}${stateText}${statusText}.`;
-
-  if(p.states.length===1 && p.status){
-    const total=totalByState(data,p.states[0]);
-    if(total>0){
-      const pct=((filtered.length/total)*100).toFixed(1);
-      answer+=` Ini mewakili kira-kira <b>${pct}%</b> daripada keseluruhan rekod ${label} di ${p.states[0]}.`;
-    }
-  }
-  return answer;
-}
-
-function answerRanking(p,data,ascending=false){
-  const filtered=filterData(data,{...p,states:[]});
-  const grouped=groupByState(filtered);
-  if(ascending) grouped.sort((a,b)=>a.count-b.count);
-  const top=grouped.slice(0,5);
-  if(!top.length) return 'Saya tidak menemui rekod yang mencukupi untuk membuat ranking.';
-  const title=ascending ? '📉 <b>Negeri dengan rekod paling rendah</b>' : '🏆 <b>Top Negeri Berdasarkan Jumlah Rekod</b>';
-  const list=top.map((x,i)=>`<div class="card"><b>${i+1}. ${esc(x.state)}</b><br><span class="muted">${x.count.toLocaleString()} rekod</span></div>`).join('');
-  const statusText=p.status?` yang ${statusLabel(p.status)}`:'';
-  return `${title}<br><span class="muted">Berdasarkan ${DATASETS[p.dataset].label}${statusText}.</span>${list}`;
-}
-
-function answerCompare(p,data){
-  if(p.states.length<2){
-    return 'Untuk membuat perbandingan, sebutkan sekurang-kurangnya <b>dua negeri</b>. Contoh: “Compare Johor dengan Selangor”.';
-  }
-  const [a,b]=p.states.slice(0,2);
-  const ca=totalByState(data,a,p.status);
-  const cb=totalByState(data,b,p.status);
-  const diff=Math.abs(ca-cb);
-  const winner=ca===cb?null:(ca>cb?a:b);
-  const label=DATASETS[p.dataset].label;
-  let answer=`⚖️ <b>Perbandingan ${a} vs ${b}</b><br><br>
-  📍 ${a}: <b>${ca.toLocaleString()}</b> rekod<br>
-  📍 ${b}: <b>${cb.toLocaleString()}</b> rekod<br><br>`;
-  if(winner){
-    answer+=`<b>${winner}</b> mempunyai <b>${diff.toLocaleString()}</b> rekod ${label} lebih banyak.`;
-  } else {
-    answer+=`Kedua-dua negeri mempunyai jumlah rekod yang sama.`;
-  }
-  return answer;
-}
-
-function answerCoverage(p,data){
-  const filtered=filterData(data,p);
-  const grouped=groupByState(filtered);
-  const total=filtered.length;
-  if(!total) return 'Saya tidak menemui data yang mencukupi untuk analisis liputan.';
-  const top=grouped.slice(0,3);
-  const items=top.map(x=>{
-    const pct=((x.count/total)*100).toFixed(1);
-    return `<div class="card"><b>${esc(x.state)}</b><br><span class="muted">${x.count.toLocaleString()} rekod · ${pct}% daripada data yang dipilih</span></div>`;
+/* ---------- Answer generation ---------- */
+function cards(data,type){
+  return data.slice(0,8).map(x=>{
+    const title=type==='program'?(x['Nama Program']||'Program KIS'):(x['Nama Institusi']||'-');
+    const place=type==='program'?(x['Lokasi Program']||'-'):(x['PPD']||x['Lokasi Program']||'-');
+    return `<div class="card"><b>${esc(title)}</b><br><span class="muted">📍 ${esc(x['Negeri']||'-')} · ${esc(place)}</span><br>📌 ${esc(x['Status Pelaksanaan']||'-')}<br>📅 ${esc(x['Tarikh Pelaksanaan']||x['Tarikh Sasaran Pelaksanaan']||'-')}</div>`;
   }).join('');
-  return `🗺️ <b>Analisis Liputan</b><br><span class="muted">Berikut ialah negeri dengan bahagian rekod tertinggi dalam data yang dipilih.</span>${items}`;
 }
-
+function answerCount(p,data){
+  const f=filterData(data,p);
+  let extra=p.states.length?` di <b>${p.states.join(' dan ')}</b>`:'';
+  if(p.status)extra+=` yang <b>${statusLabel(p.status)}</b>`;
+  if(p.quarter)extra+=` bagi <b>${p.quarter}</b>`;
+  if(p.year)extra+=` pada <b>${p.year}</b>`;
+  return `📊 Berdasarkan masterlist SMART KDAT, terdapat <b>${formatNumber(f.length)}</b> rekod ${DATASETS[p.dataset].label}${extra}.`;
+}
+function answerParticipants(p,data){
+  const f=filterData(data,p);
+  const total=f.reduce((s,x)=>s+(Number(x['Jumlah Peserta'])||0),0);
+  const avg=f.length?Math.round(total/f.length):0;
+  return `👥 Berdasarkan rekod yang dipilih, jumlah peserta direkodkan ialah <b>${formatNumber(total)}</b> orang daripada <b>${formatNumber(f.length)}</b> rekod. Purata adalah kira-kira <b>${formatNumber(avg)}</b> peserta bagi setiap rekod.`;
+}
+function answerRanking(p,data,asc=false){
+  const f=filterData(data,{...p,states:[]});
+  const metric=p.intent==='participants'?'participants':'count';
+  const g=groupByState(f,metric);
+  if(asc)g.sort((a,b)=>a.value-b.value);
+  const top=g.slice(0,5);
+  if(!top.length)return'Saya tidak menemui rekod yang mencukupi untuk membuat ranking.';
+  const title=asc?'📉 <b>Negeri dengan jumlah terendah</b>':'🏆 <b>Top 5 Negeri</b>';
+  return title+`<br><span class="muted">Berdasarkan ${DATASETS[p.dataset].label}${p.status?' yang '+statusLabel(p.status):''}.</span>`+
+    top.map((x,i)=>`<div class="card"><b>${i+1}. ${esc(x.state)}</b><br><span class="muted">${formatNumber(x.value)} ${metric==='participants'?'peserta':'rekod'}</span></div>`).join('');
+}
+function answerCompare(p,data){
+  if(p.states.length<2)return'Untuk membuat perbandingan, sebutkan dua negeri. Contoh: <b>Compare Johor dengan Selangor</b>.';
+  const [a,b]=p.states.slice(0,2);
+  const fa=filterData(data,{...p,states:[a]}),fb=filterData(data,{...p,states:[b]});
+  const metric=p.intent==='participants'?'participants':'count';
+  const va=metric==='participants'?fa.reduce((s,x)=>s+(Number(x['Jumlah Peserta'])||0),0):fa.length;
+  const vb=metric==='participants'?fb.reduce((s,x)=>s+(Number(x['Jumlah Peserta'])||0),0):fb.length;
+  const diff=Math.abs(va-vb);
+  const winner=va===vb?null:(va>vb?a:b);
+  return `⚖️ <b>Perbandingan ${a} vs ${b}</b><br><br>📍 ${a}: <b>${formatNumber(va)}</b> ${metric==='participants'?'peserta':'rekod'}<br>📍 ${b}: <b>${formatNumber(vb)}</b> ${metric==='participants'?'peserta':'rekod'}<br><br>${winner?`<b>${winner}</b> mempunyai <b>${formatNumber(diff)}</b> ${metric==='participants'?'peserta':'rekod'} lebih banyak.`:'Kedua-dua negeri mempunyai jumlah yang sama.'}`;
+}
+function answerCoverage(p,data){
+  const f=filterData(data,p),g=groupByState(f);
+  if(!g.length)return'Saya tidak menemui data yang mencukupi untuk analisis.';
+  const total=f.length;
+  return `🗺️ <b>Analisis Liputan Rekod</b><br>`+g.slice(0,5).map(x=>`<div class="card"><b>${esc(x.state)}</b><br><span class="muted">${formatNumber(x.value)} rekod · ${((x.value/total)*100).toFixed(1)}% daripada data dipilih</span></div>`).join('');
+}
 function answerList(p,data){
-  const filtered=filterData(data,p);
-  if(!filtered.length) return `Saya tidak menemui rekod yang sepadan dalam masterlist. Cuba gunakan negeri, status atau jenis institusi/program yang lebih spesifik.`;
-  const label=DATASETS[p.dataset].label;
-  let intro=`Saya jumpa <b>${filtered.length.toLocaleString()}</b> rekod ${label}`;
-  if(p.states.length) intro+=` di <b>${p.states.join(' dan ')}</b>`;
-  if(p.status) intro+=` yang <b>${statusLabel(p.status)}</b>`;
+  const f=textSearch(data,p);
+  if(!f.length)return`Saya tidak menemui rekod yang sepadan. Cuba gunakan nama institusi/program, negeri, PPD, DUN, Parlimen, status atau tahun.`;
+  let intro=`🔎 Saya menemui <b>${formatNumber(f.length)}</b> rekod yang sepadan`;
+  if(p.states.length)intro+=` di <b>${p.states.join(' dan ')}</b>`;
+  if(p.status)intro+=` yang <b>${statusLabel(p.status)}</b>`;
   intro+='.';
-  return `${intro}<br>${getRows(filtered,p.dataset)}${filtered.length>8?'<div class="muted" style="margin-top:9px">Memaparkan 8 rekod pertama.</div>':''}`;
+  return `${intro}<br>${cards(f,p.dataset)}${f.length>8?'<div class="muted" style="margin-top:9px">Memaparkan 8 rekod pertama.</div>':''}`;
 }
-
-function followUps(p){
-  const state=p.states[0];
-  const chips=[];
-  if(state && !p.status){
-    chips.push(`"${state}" yang belum dilaksanakan`, `Top negeri ${p.dataset==='program'?'program':'institusi'}`, `Compare ${state} dengan Selangor`);
-  } else if(state && p.status){
-    chips.push(`Jumlah ${p.dataset} di ${state}`, `Compare ${state} dengan Johor`, `Top 5 negeri`);
-  } else {
-    chips.push(`Top 5 negeri paling banyak ${p.dataset==='program'?'program':'institusi'}`, `Negeri mana paling banyak belum dilaksanakan`, `Compare Johor dengan Selangor`);
-  }
-  return `<div class="suggestions" style="padding:12px 0 0;border-top:0;background:transparent">${chips.slice(0,3).map(x=>`<button onclick="quick(${JSON.stringify(x)})">💬 ${esc(x)}</button>`).join('')}</div>`;
-}
-
 function buildAnswer(p){
   const data=datasetArray(p.dataset);
-
-  if(p.intent==='compare') return answerCompare(p,data);
-  if(p.intent==='top') return answerRanking(p,data,false);
-  if(p.intent==='bottom') return answerRanking(p,data,true);
-  if(p.intent==='coverage') return answerCoverage(p,data);
-  if(p.intent==='count') return answerCount(p,data);
+  if(p.intent==='compare')return answerCompare(p,data);
+  if(p.intent==='top')return answerRanking(p,data,false);
+  if(p.intent==='bottom')return answerRanking(p,data,true);
+  if(p.intent==='participants')return answerParticipants(p,data);
+  if(p.intent==='coverage')return answerCoverage(p,data);
+  if(p.intent==='count')return answerCount(p,data);
   return answerList(p,data);
 }
+function followUps(p){
+  const s=p.states[0];
+  const chips=s
+    ? [`${p.dataset==='program'?'Program':'Institusi'} di ${s} yang belum dilaksanakan`,`Jumlah peserta di ${s}`,`Compare ${s} dengan Selangor`]
+    : [`Top 5 negeri paling banyak program`,`Top 5 negeri paling banyak institusi`,`Negeri mana paling banyak belum dilaksanakan`];
+  return `<div class="suggestions" style="padding:12px 0 0;border-top:0;background:transparent">${chips.map(x=>`<button onclick="quick(${JSON.stringify(x)})">💬 ${esc(x)}</button>`).join('')}</div>`;
+}
 
-/* ---------------- Ask ---------------- */
 function ask(){
   const text=q.value.trim();
-  if(!text || (!programs.length && !institutions.length)) return;
-
-  add(esc(text),'user');
-  q.value='';
-  typing();
-
-  const p=parseQuestion(text);
+  if(!text||(!programs.length&&!institutions.length))return;
+  add(esc(text),'user');q.value='';typing();
 
   setTimeout(()=>{
     stopTyping();
+    const p=parseQuestion(text);
 
-    // Overall statistics question
     if(/jumlah program dan institusi|jumlah keseluruhan|jumlah data|berapa semua data/.test(p.n)){
-      const total=programs.length+institutions.length;
-      add(`📊 <b>Statistik Keseluruhan SMART KDAT</b><br><br>
-        🗓️ Program & Aktiviti: <b>${programs.length.toLocaleString()}</b><br>
-        🏫 Institusi Pendidikan: <b>${institutions.length.toLocaleString()}</b><br>
-        📚 Jumlah Keseluruhan: <b>${total.toLocaleString()}</b>`);
-      lastContext={dataset:'program',states:[],status:null};
-      return;
+      add(`📊 <b>Statistik Keseluruhan SMART KDAT</b><br><br>🗓️ Program & Aktiviti: <b>${formatNumber(programs.length)}</b><br>🏫 Institusi Pendidikan: <b>${formatNumber(institutions.length)}</b><br>📚 Jumlah Keseluruhan: <b>${formatNumber(programs.length+institutions.length)}</b>`);
+      lastContext={dataset:'program',states:[],status:null};return;
     }
 
     const answer=buildAnswer(p);
-    add(answer + followUps(p));
-    lastContext={dataset:p.dataset,states:p.states,status:p.status,intent:p.intent};
-  }, 420);
+    add(answer+followUps(p));
+    lastContext={...p};
+  },420);
 }
 
-q.addEventListener('keydown',e=>{ if(e.key==='Enter') ask(); });
+q.addEventListener('keydown',e=>{if(e.key==='Enter')ask();});
 
-/* ---------------- Data load ---------------- */
 Promise.all([
   fetch('program.json').then(r=>r.json()),
   fetch('institusi.json').then(r=>r.json())
 ]).then(([p,i])=>{
-  programs=p; institutions=i;
-  pCount.textContent=p.length.toLocaleString();
-  iCount.textContent=i.length.toLocaleString();
-  totalCount.textContent=(p.length+i.length).toLocaleString();
+  programs=p;institutions=i;
+  pCount.textContent=formatNumber(p.length);
+  iCount.textContent=formatNumber(i.length);
+  totalCount.textContent=formatNumber(p.length+i.length);
   welcome();
 }).catch(()=>{
-  add('⚠️ Data gagal dimuatkan. Pastikan program.json dan institusi.json berada dalam folder yang sama dengan index.html dan laman dibuka melalui GitHub Pages atau web server.');
+  add('⚠️ Data gagal dimuatkan. Pastikan program.json dan institusi.json berada dalam folder yang sama dan laman dibuka melalui GitHub Pages atau web server.');
 });
 </script>
 </body>

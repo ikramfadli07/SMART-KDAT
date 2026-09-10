@@ -1,14 +1,5 @@
-KIS SMART ASSISTANT v2
+SMART KDAT v5 — Intelligent Data Assistant
 
-Files:
-- index.html
-- program.json (7200 records)
-- institusi.json (10474 records)
-
-For testing:
-1. Upload all files to a GitHub repository.
-2. Go to Settings > Pages.
-3. Deploy from branch: main, folder: /(root).
-4. Open the GitHub Pages URL.
-
-Do not upload only the ZIP. Extract it and upload all files together.
+Upload all files to the root of your GitHub repository.
+This version runs locally using index.html + program.json + institusi.json.
+No server or API key is required.
