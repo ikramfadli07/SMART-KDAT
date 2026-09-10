@@ -198,6 +198,12 @@ body:before{
   .brand img{width:170px}.brand-title{display:none}.navlinks{justify-content:flex-start}.navlinks a{font-size:12px;padding:9px}
   .nav-status{width:100%}.stats{grid-template-columns:1fr}.msg{max-width:92%}.hero h1{font-size:43px}.inputbar button{min-width:80px}
 }
+
+/* SMART KDAT v6 suggestion interaction */
+.smart-followups button{transition:transform .18s ease, box-shadow .18s ease}
+.smart-followups button:hover{transform:translateY(-2px)}
+.smart-followups button:active{transform:scale(.98)}
+
 </style>
 </head>
 <body>
@@ -297,7 +303,7 @@ body:before{
 
 <script>
 /* =========================================================
-   SMART KDAT v5 — Intelligent Data Assistant
+   SMART KDAT v6 — Intelligent Data Assistant
    100% local: HTML + JSON. No server / API key required.
    ========================================================= */
 
@@ -364,11 +370,25 @@ function setModeByName(m){
   const btn=[...document.querySelectorAll('.mode-btn')].find(x=>norm(x.textContent).includes(m==='institusi'?'institusi':'program'));
   setMode(m,btn); q.focus();
 }
-function quick(t){q.value=t;q.focus();ask();}
+function quick(t){
+  // Suggestion buttons now feel like a real chat prompt:
+  // clear input -> auto type -> automatically send.
+  q.value='';
+  q.focus();
+  let i=0;
+  const speed = Math.max(12, Math.min(26, Math.floor(360 / Math.max(t.length,1))));
+  const timer=setInterval(()=>{
+    q.value=t.slice(0,++i);
+    if(i>=t.length){
+      clearInterval(timer);
+      setTimeout(()=>ask(),180);
+    }
+  },speed);
+}
 
 function welcome(){
-  add(`👋 <b>Selamat datang ke SMART KDAT v5!</b><br><br>
-  Saya boleh mencari dan menganalisis <b>17,674 rekod</b> secara terus daripada masterlist.<br><br>
+  add(`👋 <b>Selamat datang ke SMART KDAT v6!</b><br><br>
+  Saya boleh memahami soalan dengan lebih natural, mengingati context perbualan, dan menganalisis data secara terus daripada masterlist.<br><br>
   🗓️ Program & Aktiviti &nbsp; 🏫 Institusi Pendidikan<br>
   📍 Negeri, Wilayah, PPD, DUN & Parlimen<br>
   📌 Status Pelaksanaan &nbsp; 📅 Tarikh / Suku Tahun<br>
@@ -587,10 +607,81 @@ function buildAnswer(p){
 }
 function followUps(p){
   const s=p.states[0];
-  const chips=s
-    ? [`${p.dataset==='program'?'Program':'Institusi'} di ${s} yang belum dilaksanakan`,`Jumlah peserta di ${s}`,`Compare ${s} dengan Selangor`]
-    : [`Top 5 negeri paling banyak program`,`Top 5 negeri paling banyak institusi`,`Negeri mana paling banyak belum dilaksanakan`];
-  return `<div class="suggestions" style="padding:12px 0 0;border-top:0;background:transparent">${chips.map(x=>`<button onclick="quick(${JSON.stringify(x)})">💬 ${esc(x)}</button>`).join('')}</div>`;
+  let chips=[];
+
+  if(s){
+    chips=[
+      `Yang belum dilaksanakan di ${s}`,
+      `Jumlah peserta di ${s}`,
+      `Bandingkan ${s} dengan Selangor`
+    ];
+  } else if(p.intent==='compare' && p.states.length>=2){
+    chips=[
+      `Yang belum dilaksanakan di ${p.states[0]}`,
+      `Jumlah peserta di ${p.states[0]}`,
+      `Top 5 negeri paling banyak program`
+    ];
+  } else if(p.intent==='top' || p.intent==='bottom'){
+    chips=[
+      `Negeri mana paling banyak belum dilaksanakan`,
+      `Top 5 negeri paling banyak institusi`,
+      `Jumlah peserta mengikut negeri`
+    ];
+  } else {
+    chips=[
+      `Top 5 negeri paling banyak program`,
+      `Negeri mana paling banyak belum dilaksanakan`,
+      `Compare Johor dengan Selangor`
+    ];
+  }
+
+  return `<div class="suggestions smart-followups" style="padding:12px 0 0;border-top:0;background:transparent">
+    <div class="muted" style="font-size:12px;margin-bottom:7px">Cadangan soalan:</div>
+    ${chips.map(x=>`<button onclick="quick(${JSON.stringify(x)})">✨ ${esc(x)}</button>`).join('')}
+  </div>`;
+}
+
+/* ---------- V6 conversation intelligence ---------- */
+function applyConversationContext(p){
+  if(!lastContext) return p;
+  const n=p.n;
+
+  // Natural follow-ups such as "yang belum?", "yang sudah?" or "yang di Sabah?"
+  if(/^(yang\s*)?(belum|belum lagi|masih belum)\??$/.test(n)){
+    p.status='pending';
+    p.states=lastContext.states||[];
+    p.dataset=lastContext.dataset||p.dataset;
+    p.intent='count';
+  }
+
+  if(/^(yang\s*)?(sudah|dah|telah|selesai)\??$/.test(n)){
+    p.status='completed';
+    p.states=lastContext.states||[];
+    p.dataset=lastContext.dataset||p.dataset;
+    p.intent='count';
+  }
+
+  if(/^(compare|banding|bandingkan)\s+(dengan|vs)?\s*/.test(n) && p.states.length===1 && lastContext.states?.length){
+    p.states=[lastContext.states[0],p.states[0]];
+    p.intent='compare';
+    p.dataset=lastContext.dataset||p.dataset;
+  }
+
+  // If the user says "yang sama" or "lagi" retain the active context.
+  if((/yang sama|lagi|itu|tersebut/.test(n)) && !p.states.length && lastContext.states?.length){
+    p.states=[...lastContext.states];
+  }
+
+  return p;
+}
+
+function answerUnknown(p){
+  return `🤔 Saya faham sebahagian soalan anda, tetapi saya tidak cukup pasti apa yang perlu dianalisis.<br><br>
+  Cuba gunakan salah satu format ini:<br>
+  <div class="card">📊 “Berapa program di Sabah?”</div>
+  <div class="card">🏆 “Top 5 negeri paling banyak program”</div>
+  <div class="card">⚖️ “Compare Johor dengan Selangor”</div>
+  <div class="card">👥 “Jumlah peserta di Sabah”</div>`;
 }
 
 function ask(){
@@ -600,7 +691,18 @@ function ask(){
 
   setTimeout(()=>{
     stopTyping();
-    const p=parseQuestion(text);
+    let p=parseQuestion(text);
+    p=applyConversationContext(p);
+
+    if(/^(hi|hello|hai|salam|assalamualaikum)$/i.test(p.n)){
+      add(`👋 Hai! Saya SMART KDAT v6. Anda boleh tanya saya tentang program, institusi, status pelaksanaan, negeri, peserta atau perbandingan data.`);
+      return;
+    }
+
+    if(/^(help|bantuan|tolong|macam mana)$/i.test(p.n)){
+      add(answerUnknown(p));
+      return;
+    }
 
     if(/jumlah program dan institusi|jumlah keseluruhan|jumlah data|berapa semua data/.test(p.n)){
       add(`📊 <b>Statistik Keseluruhan SMART KDAT</b><br><br>🗓️ Program & Aktiviti: <b>${formatNumber(programs.length)}</b><br>🏫 Institusi Pendidikan: <b>${formatNumber(institutions.length)}</b><br>📚 Jumlah Keseluruhan: <b>${formatNumber(programs.length+institutions.length)}</b>`);
