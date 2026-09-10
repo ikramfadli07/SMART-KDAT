@@ -1,9 +1,14 @@
-SMART KDAT v6 — Intelligent Data Assistant
+SMART KDAT v7 — AI Hybrid
 
-New in v6:
-- Suggestion buttons auto-type the question, then automatically send it.
-- Improved conversation context and follow-up handling.
-- Natural short follow-ups such as 'yang belum?' and 'yang sudah?'.
-- Improved comparison context.
+Architecture:
+1. Local JSON is the source of truth.
+2. SMART Data Engine calculates/searches the actual records.
+3. WebLLM runs an open-source LLM in the user's browser (WebGPU) to understand/explain the structured result.
+4. If AI/WebGPU is unavailable, the factual SMART Data Engine still works.
 
-Upload all files to the root of your GitHub repository.
+Requirements for AI mode:
+- Recent Chromium browser with WebGPU support.
+- HTTPS hosting such as GitHub Pages.
+- First AI use downloads the browser model, so it can take time and use significant device resources.
+
+Files must be uploaded to the ROOT of the GitHub repository.
