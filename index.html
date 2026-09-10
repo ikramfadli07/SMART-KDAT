@@ -5,9 +5,35 @@
 <title>Kempen Internet Selamat — SMART KDAT V10</title>
 <style>
 :root{--bg:#07111f;--panel:#0d1b2e;--panel2:#10243c;--line:rgba(255,255,255,.1);--text:#f4f7fb;--muted:#a8b4c5;--accent:#5eead4;--accent2:#60a5fa}
-*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at top right,#16365a 0,#07111f 45%,#050b14 100%);color:var(--text);min-height:100vh}
-.app{max-width:1180px;margin:auto;padding:22px}.top{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px}.brand{display:flex;align-items:center;gap:14px}.logo{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:26px}.brand h1{font-size:21px;margin:0}.brand p{margin:3px 0 0;color:var(--muted);font-size:13px}.badges{display:flex;gap:8px;flex-wrap:wrap}.badge{border:1px solid var(--line);padding:8px 10px;border-radius:999px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.03)}
-.grid{display:grid;grid-template-columns:1.65fr .75fr;gap:16px}.chat,.side{background:rgba(13,27,46,.86);border:1px solid var(--line);border-radius:24px;backdrop-filter:blur(12px)}.chat{min-height:760px;display:flex;flex-direction:column;overflow:hidden}.chat-head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.ai-dot{width:9px;height:9px;background:#5eead4;border-radius:50%;box-shadow:0 0 18px #5eead4}.messages{padding:22px;flex:1;overflow:auto}.msg{max-width:88%;padding:13px 15px;margin:0 0 12px;border-radius:17px;line-height:1.55;font-size:14px}.bot{background:#10243c;border:1px solid rgba(96,165,250,.15);border-top-left-radius:5px}.user{background:linear-gradient(135deg,#155e75,#1d4ed8);margin-left:auto;border-top-right-radius:5px}.source{font-size:11px;color:var(--accent);margin-bottom:6px}.composer{border-top:1px solid var(--line);padding:14px;display:flex;gap:10px}.composer input{flex:1;background:#07111f;border:1px solid var(--line);border-radius:14px;padding:15px;color:white;font-size:14px}.composer button,.chip{border:0;cursor:pointer}.composer button{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#04111e;font-weight:800;border-radius:14px;padding:0 20px}.side{padding:18px}.side h3{margin:4px 0 12px}.stat{padding:13px;border:1px solid var(--line);border-radius:15px;margin-bottom:9px;background:rgba(255,255,255,.025)}.stat b{display:block;font-size:20px}.stat span{font-size:12px;color:var(--muted)}.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{padding:9px 10px;border-radius:999px;background:#12263e;color:#dbeafe;border:1px solid var(--line);font-size:12px}.chip:hover{transform:translateY(-1px);border-color:var(--accent)}.card{padding:10px 12px;margin-top:8px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.025)}.muted{color:var(--muted)}.typing{color:var(--muted)}.intent{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#93c5fd;margin-top:8px}.toggle{display:flex;gap:6px}.toggle button{border:1px solid var(--line);background:transparent;color:var(--muted);padding:7px 9px;border-radius:10px;cursor:pointer}.toggle .active{background:#173455;color:white}@media(max-width:900px){.grid{grid-template-columns:1fr}.side{display:none}.app{padding:10px}.chat{min-height:88vh}.top{align-items:flex-start}.badges{display:none}}
+*{box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at top right,#16365a 0,#07111f 45%,#050b14 100%);color:var(--text)}
+.app{height:100dvh;max-width:1280px;margin:auto;padding:18px;display:flex;flex-direction:column;overflow:hidden}
+.top{flex:0 0 auto;display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.brand{display:flex;align-items:center;gap:14px}.logo{width:50px;height:50px;flex:none;border-radius:16px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:25px;box-shadow:0 8px 30px rgba(94,234,212,.18)}
+.brand h1{font-size:20px;margin:0}.brand p{margin:3px 0 0;color:var(--muted);font-size:12px}
+.badges{display:flex;gap:8px;flex-wrap:wrap}.badge{border:1px solid var(--line);padding:7px 10px;border-radius:999px;font-size:11px;color:var(--muted);background:rgba(255,255,255,.03)}
+.grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.7fr) 300px;gap:14px}
+.chat,.side{min-height:0;background:rgba(13,27,46,.9);border:1px solid var(--line);border-radius:24px;backdrop-filter:blur(12px)}
+.chat{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;box-shadow:0 20px 70px rgba(0,0,0,.22)}
+.chat-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;background:rgba(7,17,31,.45);z-index:2}
+.messages{min-height:0;padding:20px 20px 28px;overflow-y:auto;overflow-x:hidden;scroll-behavior:smooth}
+.messages::-webkit-scrollbar{width:7px}.messages::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:999px}
+.msg{max-width:88%;padding:13px 15px;margin:0 0 12px;border-radius:17px;line-height:1.55;font-size:14px;animation:pop .22s ease both}
+@keyframes pop{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.bot{background:#10243c;border:1px solid rgba(96,165,250,.16);border-top-left-radius:5px}
+.user{background:linear-gradient(135deg,#155e75,#1d4ed8);margin-left:auto;border-top-right-radius:5px}
+.source{font-size:10px;letter-spacing:.06em;color:var(--accent);margin-bottom:7px;font-weight:800}
+.composer{position:relative;z-index:3;border-top:1px solid var(--line);padding:13px 14px;background:linear-gradient(to top,rgba(7,17,31,.98),rgba(7,17,31,.94));display:flex;gap:10px;align-items:center}
+.composer input{min-width:0;flex:1;background:#07111f;border:1px solid var(--line);border-radius:15px;padding:15px 16px;color:white;font-size:14px;outline:none;transition:.2s}
+.composer input:focus{border-color:rgba(94,234,212,.8);box-shadow:0 0 0 3px rgba(94,234,212,.08)}
+.composer button{height:48px;white-space:nowrap;border:0;cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#04111e;font-weight:800;border-radius:15px;padding:0 20px;transition:.2s}
+.composer button:hover{transform:translateY(-1px);filter:brightness(1.05)}
+.side{height:100%;overflow:auto;padding:17px}.side h3{margin:4px 0 12px}.stat{padding:13px;border:1px solid var(--line);border-radius:15px;margin-bottom:9px;background:rgba(255,255,255,.025)}.stat b{display:block;font-size:20px}.stat span{font-size:12px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{padding:9px 10px;border-radius:999px;background:#12263e;color:#dbeafe;border:1px solid var(--line);font-size:12px;cursor:pointer;transition:.2s}.chip:hover{transform:translateY(-1px);border-color:var(--accent)}
+.card{padding:10px 12px;margin-top:8px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.025)}.muted{color:var(--muted)}.intent{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;color:#93c5fd;margin-top:9px;white-space:pre-wrap;max-height:150px;overflow:auto;padding:8px;background:rgba(0,0,0,.12);border-radius:9px}
+.toggle{display:flex;gap:6px}.toggle button{border:1px solid var(--line);background:transparent;color:var(--muted);padding:7px 9px;border-radius:10px;cursor:pointer}.toggle .active{background:#173455;color:white}
+@media(max-width:900px){html,body{overflow:auto}.app{height:100dvh;padding:10px}.grid{grid-template-columns:1fr}.side{display:none}.top{align-items:flex-start}.badges{display:none}.chat{min-height:0}.brand h1{font-size:16px}.brand p{font-size:11px}.msg{max-width:94%}}
 </style>
 </head>
 <body>
@@ -38,7 +64,14 @@ const months=['JANUARI','FEBRUARI','MAC','APRIL','MEI','JUN','JULAI','OGOS','SEP
 const norm=v=>String(v??'').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 const num=n=>Number(n||0).toLocaleString('en-MY');
-function msg(html,who='bot'){const d=document.createElement('div');d.className='msg '+who;d.innerHTML=html;messages.appendChild(d);messages.scrollTop=messages.scrollHeight;return d}
+function msg(html,who='bot'){
+  const d=document.createElement('div');
+  d.className='msg '+who;
+  d.innerHTML=html;
+  messages.appendChild(d);
+  requestAnimationFrame(()=>{messages.scrollTop=messages.scrollHeight});
+  return d
+}
 function setDataset(x){selected=x;['auto','program','institusi'].forEach(k=>document.getElementById(k==='auto'?'autoBtn':k==='program'?'progBtn':'instBtn').classList.toggle('active',k===x))}
 function typeAndAsk(t){q.value='';let i=0;const z=setInterval(()=>{q.value=t.slice(0,++i);if(i===t.length){clearInterval(z);setTimeout(ask,120)}},12)}
 function cleanVal(v){return norm(v)}
@@ -125,7 +158,7 @@ function follow(p){
 function ask(){
  const text=q.value.trim();if(!text)return;msg(esc(text),'user');q.value='';
  const p=parse(text);lastPlan=p;
- msg(`<div class="source">🧠 STRUCTURED DATA QUERY</div>${answer(p)}<div class="intent">${esc(planLabel(p))}</div>${follow(p)}`);
+ msg(`<div class="source">🧠 STRUCTURED DATA QUERY</div>${answer(p)}<details style="margin-top:10px"><summary class="muted" style="cursor:pointer;font-size:11px">Lihat Structured Query</summary><div class="intent">${esc(planLabel(p))}</div></details>${follow(p)}`);
 }
 q.addEventListener('keydown',e=>{if(e.key==='Enter')ask()});
 Promise.all([fetch('program.json').then(r=>r.json()),fetch('institusi.json').then(r=>r.json()),fetch('knowledge.json').then(r=>r.json())]).then(([p,i,k])=>{
