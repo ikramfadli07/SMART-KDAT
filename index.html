@@ -15,16 +15,291 @@
 <main class="grid"><section class="chat"><div class="chat-head"><div class="chat-title"><div class="bot-avatar">🛡️</div><div><b>SMART KDAT Assistant</b><span>Fahami soalan → kenal pasti filter → jawab berdasarkan masterlist</span></div></div><div class="status"><i></i> Online</div></div><div class="messages" id="messages"></div><form class="composer" id="form"><input id="q" autocomplete="off" placeholder="Contoh: Berapa Karnival Komuniti yang belum dilaksanakan di Sabah?"><button>Tanya ✦</button></form></section>
 <aside class="side"><h3>Data Overview</h3><div class="stat"><b id="programCount">—</b><span>Rekod Program</span></div><div class="stat"><b id="institusiCount">—</b><span>Rekod Institusi</span></div><h3 style="margin-top:22px">Cuba tanya</h3><div class="chips"><button class="chip">Karnival Komuniti sahaja</button><button class="chip">Berapa Karnival Komuniti di Sabah?</button><button class="chip">Program belum dilaksanakan bulan Julai</button><button class="chip">Top 5 negeri paling banyak program</button><button class="chip">Institusi SK di Sabah</button><button class="chip">Jumlah peserta di Johor</button></div><div class="card"><b style="color:var(--heading)">Cara SMART KDAT berfikir</b><br>Ia mengenal pasti dataset, negeri, status, bulan, kategori program dan kata kunci sebelum menapis rekod sebenar.</div></aside></main></div>
 <script>
-const messages=document.getElementById('messages'),q=document.getElementById('q');let PROGRAM=[],INSTITUSI=[];
+const API_URL = "https://smart-kdat-api.ikramfadli07.workers.dev/";
+
+const messages=document.getElementById('messages'),q=document.getElementById('q');
+let PROGRAM=[],INSTITUSI=[];
+
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s??'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\w\s]/g,' ').replace(/\s+/g,' ').trim();
-const states=['PERLIS','PULAU PINANG','KEDAH','PERAK','PAHANG','TERENGGANU','KELANTAN','NEGERI SEMBILAN','JOHOR','MELAKA','SELANGOR','WILAYAH PERSEKUTUAN','SARAWAK','SABAH'],aliases={penang:'PULAU PINANG',wp:'WILAYAH PERSEKUTUAN','kuala lumpur':'WILAYAH PERSEKUTUAN','negeri sembilan':'NEGERI SEMBILAN'};
+
+const states=['PERLIS','PULAU PINANG','KEDAH','PERAK','PAHANG','TERENGGANU','KELANTAN','NEGERI SEMBILAN','JOHOR','MELAKA','SELANGOR','WILAYAH PERSEKUTUAN','SARAWAK','SABAH'];
+const aliases={penang:'PULAU PINANG',wp:'WILAYAH PERSEKUTUAN','kuala lumpur':'WILAYAH PERSEKUTUAN'};
 const months={januari:1,februari:2,mac:3,april:4,mei:5,jun:6,julai:7,ogos:8,september:9,oktober:10,november:11,disember:12,january:1,february:2,march:3,may:5,june:6,july:7,august:8,october:10,december:12};
-const field=(o,n)=>{for(const x of n)if(o[x]!=null&&o[x]!=='')return o[x];return ''};
-function add(h,w='bot'){const d=document.createElement('div');d.className='msg '+w;d.innerHTML=h;messages.appendChild(d);requestAnimationFrame(()=>messages.scrollTop=messages.scrollHeight);return d}
-function parse(question){const t=norm(question);let state=null;for(const [a,s] of Object.entries(aliases))if(t.includes(a))state=s;if(!state)state=states.find(s=>t.includes(norm(s)))||null;let month=null;for(const [m,n] of Object.entries(months))if(t.includes(m)){month=n;break}let status=/belum dilaksanakan|belum/.test(t)?'belum':/sudah dilaksanakan|telah dilaksanakan|sudah/.test(t)?'sudah':null;let category=/karnival komuniti/.test(t)?'Karnival Komuniti':/program umum/.test(t)?'Program Umum':/bengkel ikon/.test(t)?'Bengkel Ikon K-DAT':null;let top=(t.match(/top\s*(\d+)/)||[])[1];return{t,state,month,status,category,top:top?+top:null,dataset:/institusi|sekolah|universiti|kolej|ipg|sk |smk |pendidikan/.test(' '+t+' ')?'institusi':'program',participant:/jumlah peserta|berapa peserta|peserta/.test(t),count:/berapa|jumlah|bilangan|berapa banyak|count|top/.test(t)}}
-function filtered(data,p){return data.filter(r=>{if(p.state&&norm(field(r,['Negeri']))!==norm(p.state))return false;if(p.month&&String(field(r,['Bulan']))!==String(p.month))return false;const st=norm(field(r,['Status Pelaksanaan']));if(p.status==='belum'&&!st.includes('belum'))return false;if(p.status==='sudah'&&!st.includes('sudah'))return false;if(p.category&&!norm(field(r,['Kategori Program'])).includes(norm(p.category)))return false;if(p.dataset==='institusi'&&/(^|\s)sk(\s|$)/.test(' '+p.t+' ')){const v=norm(field(r,['Kategori Sekolah','Nama Institusi','Jenis Institusi']));if(!/(^|\s)sk(\s|$)|sekolah kebangsaan/.test(v))return false}return true})}
-function makeTable(rows,ds){const cols=ds==='institusi'?['Nama Institusi','Negeri','Kategori Sekolah','Status Pelaksanaan','Tarikh Pelaksanaan','Jumlah Peserta']:['Nama Program','Negeri','Kategori Program','Status Pelaksanaan','Tarikh Pelaksanaan','Jumlah Peserta'];return `<table class="answer-table"><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.slice(0,8).map(r=>`<tr>${cols.map(c=>`<td>${esc(field(r,[c])||'—')}</td>`).join('')}</tr>`).join('')}</tbody></table>${rows.length>8?`<div style="margin-top:8px;font-size:11px">Memaparkan 8 daripada ${rows.length.toLocaleString()} rekod.</div>`:''}`}
-function answer(question){const p=parse(question),data=p.dataset==='institusi'?INSTITUSI:PROGRAM,rows=filtered(data,p);if(p.top){const g={};rows.forEach(r=>{const s=field(r,['Negeri'])||'Tidak diketahui';g[s]=(g[s]||0)+1});const top=Object.entries(g).sort((a,b)=>b[1]-a[1]).slice(0,p.top);return `<div class="source">Analisis Masterlist</div><b>Top ${p.top} negeri berdasarkan jumlah rekod</b><table class="answer-table"><thead><tr><th>Negeri</th><th>Jumlah Rekod</th></tr></thead><tbody>${top.map(x=>`<tr><td>${esc(x[0])}</td><td><b>${x[1].toLocaleString()}</b></td></tr>`).join('')}</tbody></table>`}const ctx=[p.dataset==='institusi'?'Institusi Pendidikan':'Program',p.category,p.state,p.status==='belum'?'Belum Dilaksanakan':p.status==='sudah'?'Sudah Dilaksanakan':null,p.month?'Bulan '+p.month:null].filter(Boolean).join(' · ');if(!rows.length)return `<div class="source">Semakan Masterlist</div><b>Saya tidak jumpa rekod yang sepadan.</b><br><span style="font-size:12px">Saya menapis: ${esc(ctx||'masterlist')}.</span>`;if(p.participant){const total=rows.reduce((a,r)=>a+(parseFloat(field(r,['Jumlah Peserta']))||0),0);return `<div class="source">Semakan Masterlist</div><b>Jumlah peserta: ${total.toLocaleString()}</b><br><span style="font-size:12px">Berdasarkan ${rows.length.toLocaleString()} rekod (${esc(ctx)}).</span>${makeTable(rows,p.dataset)}`}if(p.count||p.category||p.state||p.status||p.month)return `<div class="source">Semakan Masterlist</div><b>${rows.length.toLocaleString()} rekod ditemui</b><br><span style="font-size:12px">Filter: ${esc(ctx)}.</span>${makeTable(rows,p.dataset)}`;return `<div class="source">SMART KDAT</div>Saya boleh membantu anda mencari data daripada <b>${PROGRAM.length.toLocaleString()} rekod Program</b> dan <b>${INSTITUSI.length.toLocaleString()} rekod Institusi Pendidikan</b>.`}
-async function boot(){try{[PROGRAM,INSTITUSI]=await Promise.all([fetch('program.json').then(r=>r.json()),fetch('institusi.json').then(r=>r.json())]);document.getElementById('programCount').textContent=PROGRAM.length.toLocaleString();document.getElementById('institusiCount').textContent=INSTITUSI.length.toLocaleString();document.getElementById('recordBadge').textContent=(PROGRAM.length+INSTITUSI.length).toLocaleString()+' rekod dimuatkan';add(`<div class="source">Selamat datang</div><b>Hai! Saya SMART KDAT.</b><br>Saya boleh membantu anda mencari dan menganalisis data <b>Kempen Internet Selamat</b> berdasarkan masterlist sebenar.<br><br>Cuba: <b>“Karnival Komuniti sahaja”</b> atau <b>“Berapa Karnival Komuniti di Sabah?”</b>`)}catch(e){add(`<div class="source">Ralat Data</div>Pastikan <b>program.json</b> dan <b>institusi.json</b> berada dalam folder yang sama dengan index.html.`)}}document.getElementById('form').addEventListener('submit',async e=>{e.preventDefault();const text=q.value.trim();if(!text)return;add(esc(text),'user');q.value='';const t=add('<div class="typing"><i></i><i></i><i></i></div>');try{const response=await fetch('https://smart-kdat-api.ikramfadli07.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:text})});const data=await response.json();t.remove();if(!response.ok)throw new Error(data.error||'Server error');add(data.answer||'Maaf, tiada jawapan diterima daripada server.')}catch(error){console.error(error);t.remove();add('<div class="source">Ralat Sambungan</div>Maaf, SMART KDAT tidak dapat menghubungi server buat masa ini.')}});document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{q.value=c.textContent;q.focus()}));boot();
+
+const field=(o,n)=>{
+  for(const x of n) if(o?.[x]!=null && o[x]!=='') return o[x];
+  return '';
+};
+
+function add(h,w='bot'){
+  const d=document.createElement('div');
+  d.className='msg '+w;
+  d.innerHTML=h;
+  messages.appendChild(d);
+  requestAnimationFrame(()=>messages.scrollTop=messages.scrollHeight);
+  return d;
+}
+
+function parse(question){
+  const t=norm(question);
+  let state=null;
+  for(const [a,s] of Object.entries(aliases)) if(t.includes(a)) state=s;
+  if(!state) state=states.find(s=>t.includes(norm(s)))||null;
+
+  let month=null;
+  for(const [m,n] of Object.entries(months)){
+    if(t.includes(m)){ month=n; break; }
+  }
+
+  const status=/belum dilaksanakan|belum/.test(t)?'belum':
+    /sudah dilaksanakan|telah dilaksanakan|sudah/.test(t)?'sudah':null;
+
+  const category=/karnival komuniti/.test(t)?'Karnival Komuniti':
+    /program umum/.test(t)?'Program Umum':
+    /bengkel ikon/.test(t)?'Bengkel Ikon K-DAT':null;
+
+  const top=(t.match(/top\s*(\d+)/)||[])[1];
+
+  return {
+    t,state,month,status,category,top:top?+top:null,
+    dataset:/institusi|sekolah|universiti|kolej|ipg|pendidikan/.test(' '+t+' ')?'institusi':'program',
+    participant:/jumlah peserta|berapa peserta|peserta/.test(t),
+    count:/berapa|jumlah|bilangan|berapa banyak|count|top/.test(t)
+  };
+}
+
+function filtered(data,p){
+  return data.filter(r=>{
+    if(p.state && norm(field(r,['Negeri']))!==norm(p.state)) return false;
+    if(p.month && String(field(r,['Bulan']))!==String(p.month)) return false;
+
+    const st=norm(field(r,['Status Pelaksanaan']));
+    if(p.status==='belum' && !st.includes('belum')) return false;
+    if(p.status==='sudah' && !st.includes('sudah')) return false;
+
+    if(p.category){
+      const cat=norm(field(r,['Kategori Program']));
+      const name=norm(field(r,['Nama Program']));
+      const wanted=norm(p.category);
+      if(!cat.includes(wanted) && !name.includes(wanted)) return false;
+    }
+
+    if(p.dataset==='institusi' && /(^|\s)sk(\s|$)/.test(' '+p.t+' ')){
+      const v=norm(field(r,['Kategori Sekolah','Nama Institusi','Jenis Institusi']));
+      if(!/(^|\s)sk(\s|$)|sekolah kebangsaan/.test(v)) return false;
+    }
+
+    return true;
+  });
+}
+
+function makeTable(rows,ds){
+  const cols=ds==='institusi'
+    ?['Nama Institusi','Negeri','Kategori Sekolah','Status Pelaksanaan','Tarikh Pelaksanaan','Jumlah Peserta']
+    :['Nama Program','Negeri','Kategori Program','Status Pelaksanaan','Tarikh Pelaksanaan','Jumlah Peserta'];
+
+  return `<table class="answer-table"><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${
+    rows.slice(0,8).map(r=>`<tr>${cols.map(c=>`<td>${esc(field(r,[c])||'—')}</td>`).join('')}</tr>`).join('')
+  }</tbody></table>${
+    rows.length>8?`<div style="margin-top:8px;font-size:11px">Memaparkan 8 daripada ${rows.length.toLocaleString()} rekod.</div>`:''
+  }`;
+}
+
+function localAnswer(question){
+  const p=parse(question);
+  const data=p.dataset==='institusi'?INSTITUSI:PROGRAM;
+  const rows=filtered(data,p);
+
+  if(p.top){
+    const g={};
+    rows.forEach(r=>{
+      const s=field(r,['Negeri'])||'Tidak diketahui';
+      g[s]=(g[s]||0)+1;
+    });
+    const top=Object.entries(g).sort((a,b)=>b[1]-a[1]).slice(0,p.top);
+
+    return `<div class="source">Analisis Masterlist</div><b>Top ${p.top} negeri berdasarkan jumlah rekod</b>
+      <table class="answer-table"><thead><tr><th>Negeri</th><th>Jumlah Rekod</th></tr></thead>
+      <tbody>${top.map(x=>`<tr><td>${esc(x[0])}</td><td><b>${x[1].toLocaleString()}</b></td></tr>`).join('')}</tbody></table>`;
+  }
+
+  const ctx=[
+    p.dataset==='institusi'?'Institusi Pendidikan':'Program',
+    p.category,p.state,
+    p.status==='belum'?'Belum Dilaksanakan':p.status==='sudah'?'Sudah Dilaksanakan':null,
+    p.month?'Bulan '+p.month:null
+  ].filter(Boolean).join(' · ');
+
+  if(!rows.length){
+    return `<div class="source">Semakan Masterlist</div><b>Saya tidak jumpa rekod yang sepadan.</b><br>
+      <span style="font-size:12px">Saya menapis: ${esc(ctx||'masterlist')}.</span>`;
+  }
+
+  if(p.participant){
+    const total=rows.reduce((a,r)=>a+(parseFloat(field(r,['Jumlah Peserta']))||0),0);
+    return `<div class="source">Semakan Masterlist</div><b>Jumlah peserta: ${total.toLocaleString()}</b><br>
+      <span style="font-size:12px">Berdasarkan ${rows.length.toLocaleString()} rekod (${esc(ctx)}).</span>${makeTable(rows,p.dataset)}`;
+  }
+
+  if(p.count||p.category||p.state||p.status||p.month){
+    return `<div class="source">Semakan Masterlist</div><b>${rows.length.toLocaleString()} rekod ditemui</b><br>
+      <span style="font-size:12px">Filter: ${esc(ctx)}.</span>${makeTable(rows,p.dataset)}`;
+  }
+
+  return `<div class="source">SMART KDAT</div>Saya boleh membantu anda mencari data daripada
+    <b>${PROGRAM.length.toLocaleString()} rekod Program</b> dan
+    <b>${INSTITUSI.length.toLocaleString()} rekod Institusi Pendidikan</b>.`;
+}
+
+function cleanRecord(r,dataset){
+  const keys=dataset==='institusi'
+    ?['No.','Wilayah','Negeri','PPD','Nama Institusi','Kategori Institusi','Kategori Sekolah','Jenis Institusi','Nama Program','Kategori Program','Status Pelaksanaan','Tarikh Sasaran Pelaksanaan','Tarikh Pelaksanaan','Jumlah Peserta']
+    :['No.','Wilayah','Negeri','Dun','Parlimen','Nama Program','Lokasi Program','Status Pelaksanaan','Suku Tahun','Tarikh Sasaran Pelaksanaan','Tarikh Pelaksanaan','Topik/ Modul','Pelaksana','Kategori Program','Jumlah Peserta','Bulan','Tahun'];
+
+  const out={};
+  keys.forEach(k=>{
+    if(r?.[k]!==undefined && r[k]!==null && r[k]!=='') out[k]=r[k];
+  });
+  return out;
+}
+
+function keywordScore(record,question){
+  const qWords=norm(question).split(' ').filter(w=>w.length>=3);
+  const text=norm(Object.values(record||{}).join(' '));
+  return qWords.reduce((score,w)=>score+(text.includes(w)?1:0),0);
+}
+
+function getRelevantContext(question){
+  const p=parse(question);
+  const dataset=p.dataset;
+  const data=dataset==='institusi'?INSTITUSI:PROGRAM;
+
+  let rows=filtered(data,p);
+  const hasStructuredFilter=Boolean(p.state||p.month||p.status||p.category||p.dataset==='institusi');
+
+  if(!hasStructuredFilter){
+    rows=data
+      .map(r=>({r,score:keywordScore(r,question)}))
+      .filter(x=>x.score>0)
+      .sort((a,b)=>b.score-a.score)
+      .slice(0,60)
+      .map(x=>x.r);
+  } else {
+    rows=rows.slice(0,80);
+  }
+
+  const summary={
+    dataset:dataset==='institusi'?'Institusi Pendidikan':'Program',
+    total_dataset_records:data.length,
+    matched_records:hasStructuredFilter?filtered(data,p).length:rows.length,
+    filters:{
+      negeri:p.state||null,
+      bulan:p.month||null,
+      status:p.status||null,
+      kategori:p.category||null
+    },
+    records:rows.map(r=>cleanRecord(r,dataset))
+  };
+
+  return summary;
+}
+
+function formatAI(text){
+  return esc(text)
+    .replace(/\n/g,'<br>')
+    .replace(/(\*\*)(.+?)\1/g,'<b>$2</b>')
+    .replace(/^- (.+)$/gm,'• $1');
+}
+
+async function askAI(question){
+  const context=getRelevantContext(question);
+
+  const response=await fetch(API_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({question,context})
+  });
+
+  const raw=await response.text();
+  let result={};
+  try{ result=JSON.parse(raw); }catch{ throw new Error(raw||'Respons server tidak sah'); }
+
+  if(!response.ok) throw new Error(result.error||result.message||'Server error');
+
+  const reply=result.answer||result.response||result.text;
+  if(!reply) throw new Error('Tiada jawapan daripada AI');
+
+  return `<div class="source">SMART KDAT · Analisis AI</div>${formatAI(reply)}`;
+}
+
+async function boot(){
+  try{
+    const [programRaw,institusiRaw]=await Promise.all([
+      fetch('program.json').then(async r=>{
+        if(!r.ok) throw new Error('program.json tidak dapat dibaca');
+        return r.json();
+      }),
+      fetch('institusi.json').then(async r=>{
+        if(!r.ok) throw new Error('institusi.json tidak dapat dibaca');
+        return r.json();
+      })
+    ]);
+
+    PROGRAM=Array.isArray(programRaw)?programRaw:(programRaw.data||[]);
+    INSTITUSI=Array.isArray(institusiRaw)?institusiRaw:(institusiRaw.data||[]);
+
+    if(!Array.isArray(PROGRAM)||!Array.isArray(INSTITUSI)){
+      throw new Error('Format JSON tidak sah');
+    }
+
+    document.getElementById('programCount').textContent=PROGRAM.length.toLocaleString();
+    document.getElementById('institusiCount').textContent=INSTITUSI.length.toLocaleString();
+    document.getElementById('recordBadge').textContent=(PROGRAM.length+INSTITUSI.length).toLocaleString()+' rekod dimuatkan';
+
+    add(`<div class="source">Selamat datang</div><b>Hai! Saya SMART KDAT.</b><br>
+      Saya boleh membantu anda mencari dan menganalisis data <b>Kempen Internet Selamat</b>
+      berdasarkan masterlist sebenar.<br><br>
+      Cuba: <b>“Karnival Komuniti sahaja”</b> atau
+      <b>“Berapa Karnival Komuniti di Sabah?”</b>`);
+
+  }catch(e){
+    console.error(e);
+    add(`<div class="source">Ralat Data</div>
+      Saya tidak dapat membaca masterlist. Pastikan <b>program.json</b> dan
+      <b>institusi.json</b> berada dalam folder yang sama dengan <b>index.html</b>.<br>
+      <span style="font-size:11px">${esc(e.message||e)}</span>`);
+  }
+}
+
+document.getElementById('form').addEventListener('submit',async e=>{
+  e.preventDefault();
+
+  const text=q.value.trim();
+  if(!text) return;
+
+  add(esc(text),'user');
+  q.value='';
+
+  const t=add('<div class="typing"><i></i><i></i><i></i></div>');
+
+  try{
+    const aiAnswer=await askAI(text);
+    t.remove();
+    add(aiAnswer);
+  }catch(err){
+    console.error('AI error:',err);
+    t.remove();
+    add(`<div class="source">Analisis Masterlist</div>
+      <span style="font-size:12px">AI tidak dapat dihubungi. Berikut ialah semakan terus daripada masterlist.</span><br><br>
+      ${localAnswer(text)}`);
+  }
+});
+
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+  q.value=c.textContent;
+  q.focus();
+}));
+
+boot();
 </script></body></html>
